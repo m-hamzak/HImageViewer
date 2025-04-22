@@ -15,9 +15,6 @@ public protocol ImageViewerDelegate: AnyObject {
     func didDeletePhotos(_ photos: [PhotoAsset])
 }
 
-import SwiftUI
-import Photos
-
 public struct ImageViewer: View {
     @Binding private var assets: [PhotoAsset]
     @Binding private var selectedVideo: URL?
@@ -46,7 +43,7 @@ public struct ImageViewer: View {
     public var body: some View {
         VStack {
             
-            topBar
+            TopBar
                 .padding(.horizontal)
                 .padding(.top, 12)
             
@@ -71,42 +68,8 @@ public struct ImageViewer: View {
             }
 
             Spacer()
-
-            // Bottom actions (Save, Select/Delete)
-//            HStack {
-//                Button(selectionMode ? "Delete" : "Select") {
-//                    if selectionMode {
-//                        handleDelete()
-//                    } else {
-//                        selectionMode = true
-//                    }
-//                }
-//                .buttonStyle(.bordered)
-//
-//                Spacer()
-//
-//                Button("Save") {
-//                    handleSaveComment()
-//                }
-//                .buttonStyle(.borderedProminent)
-//            }
-//            .padding()
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Button(action: {
-//                        savedComment = comment
-                    }) {
-                        Text("Save")
-                            .bold()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.gray)
-                    .padding(.trailing)
-                    .padding(.bottom, 16)
-                }
-            }
+            BottomBar
+                
         }
         .onDisappear {
             delegate?.didAddPhotos(assets)
@@ -114,7 +77,7 @@ public struct ImageViewer: View {
     }
     
     // MARK: - Top Bar
-    private var topBar: some View {
+    private var TopBar: some View {
         HStack {
             Button(action: { dismiss() }) {
                 Image(systemName: "xmark")
@@ -128,7 +91,7 @@ public struct ImageViewer: View {
             Spacer()
 
             HStack(spacing: 8) {
-//                if isMultiPhotoMode {
+                if !isSinglePhotoMode {
 //                    Button(action: {
 //                        withAnimation {
 //                            showEditOptions.toggle()
@@ -142,7 +105,11 @@ public struct ImageViewer: View {
 //                    }
 //                    .buttonStyle(.bordered)
 //                    .tint(.gray)
-//                } else {
+                    Button(selectionMode ? "Done" : "Select") {
+                        selectionMode = !selectionMode
+                    }
+                    .buttonStyle(.borderless)
+                } else {
                     if showEditOptions {
                         Button(action: {}) {
                             Image(systemName: "crop")
@@ -166,9 +133,54 @@ public struct ImageViewer: View {
                     }
                     .buttonStyle(.bordered)
                     .clipShape(Circle())
-//                }
+                }
             }
         }
+    }
+    
+    // MARK: - Bottom Bar
+    private var BottomBar: some View {
+        VStack {
+            Spacer()
+            HStack {
+                if isSinglePhotoMode {
+                    commentSection
+                } else {
+                    Button(action: {
+                        handleDelete()
+                    }) {
+                        Image(systemName: "trash")
+                            .font(.title3)
+                            .padding(3)
+                            .foregroundStyle(.red)
+                    }
+                    .buttonStyle(.borderless)
+                    .padding(.leading)
+                    .padding(.bottom, 16)
+                    Spacer()
+                }
+                
+                Button(action: {
+//                        savedComment = comment
+                }) {
+                    Text("Save")
+                        .bold()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.gray)
+                .padding(.trailing)
+                .padding(.bottom, 16)
+            }
+        }
+
+    }
+    
+    // MARK: - Comment Section (single photo only)
+    private var commentSection: some View {
+            TextField("Add a comment ...", text: $comment)
+                .textFieldStyle(.roundedBorder)
+                .padding([.horizontal, .bottom])
+                .frame(minHeight: 50)
     }
 
     // MARK: - Selection Handling
@@ -184,13 +196,13 @@ public struct ImageViewer: View {
     // MARK: - Delete Handling
 
     private func handleDelete() {
-//        let deletedAssets = selectedIndices.map { assets[$0] }
-//        assets.removeAll { asset in
-//            deletedAssets.contains(where: { $0.id == asset.id })
-//        }
-//        selectedIndices.removeAll()
-//        delegate?.didDeletePhotos(deletedAssets)
-//        selectionMode = false
+        let deletedAssets = selectedIndices.map { assets[$0] }
+        assets.removeAll { asset in
+            deletedAssets.contains(where: { $0.id == asset.id })
+        }
+        selectedIndices.removeAll()
+        delegate?.didDeletePhotos(deletedAssets)
+        selectionMode = false
     }
 
     // MARK: - Save Handling
