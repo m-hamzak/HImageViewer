@@ -9,11 +9,11 @@
 import SwiftUI
 import AVKit
 
-struct VideoPlayerView: View {
+public struct VideoPlayerView: View {
     let videoURL: URL
     @StateObject private var playerHolder = PlayerHolder()
 
-    var body: some View {
+    public var body: some View {
         VideoPlayer(player: playerHolder.player)
             .onAppear {
                 if playerHolder.player.currentItem == nil {

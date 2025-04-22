@@ -9,20 +9,18 @@
 import SwiftUI
 import Photos
 
-struct MultiPhotoGrid: View {
+public struct MultiPhotoGrid: View {
     let assets: [PhotoAsset]
     let selectedIndices: Set<Int>
     let selectionMode: Bool
     let onSelectToggle: (Int) -> Void
     let onAddMore: () -> Void
 
-    private let manager = PHCachingImageManager()
-
-    var body: some View {
+    public var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), spacing: 10)], spacing: 10) {
             ForEach(Array(assets.enumerated()), id: \.1.id) { index, photo in
                 ZStack(alignment: .topTrailing) {
-                    ThumbnailImageView(asset: photo.asset)
+                    ThumbnailImageView(photo: photo)
                         .frame(width: 100, height: 100)
                         .cornerRadius(10)
 
@@ -31,7 +29,7 @@ struct MultiPhotoGrid: View {
                             onSelectToggle(index)
                         }) {
                             Image(systemName: selectedIndices.contains(index) ? "checkmark.circle.fill" : "circle")
-                                .font(.system(size: 22))
+                                .font(.system(size: 20))
                                 .foregroundColor(selectedIndices.contains(index) ? .blue : .gray)
                                 .padding(6)
                         }
