@@ -16,6 +16,7 @@ public protocol ImageViewerDelegate: AnyObject {
 }
 
 public struct ImageViewer: View {
+    
     @Binding private var assets: [PhotoAsset]
     @Binding private var selectedVideo: URL?
     private let isSinglePhotoMode: Bool
@@ -53,17 +54,16 @@ public struct ImageViewer: View {
                         .cornerRadius(10)
                         .padding()
                 } else if let firstAsset = assets.first {
-                    ThumbnailImageView(photo: firstAsset)
+                    PhotoView(photo: firstAsset)
                         .cornerRadius(10)
                         .padding()
                 }
             } else {
-                MultiPhotoGrid(
+                MultiPhotoGrid (
                     assets: assets,
                     selectedIndices: selectedIndices,
                     selectionMode: selectionMode,
-                    onSelectToggle: handleSelection,
-                    onAddMore: handleAddMore
+                    onSelectToggle: handleSelection
                 )
             }
 
@@ -79,32 +79,20 @@ public struct ImageViewer: View {
     // MARK: - Top Bar
     private var TopBar: some View {
         HStack {
-            Button(action: { dismiss() }) {
-                Image(systemName: "xmark")
-                    .font(.headline)
-                    .padding(3)
-                    .foregroundStyle(.gray)
+            if !selectionMode {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .font(.headline)
+                        .padding(3)
+                        .foregroundStyle(.gray)
+                }
+                .buttonStyle(.bordered)
+                .clipShape(Circle())
             }
-            .buttonStyle(.bordered)
-            .clipShape(Circle())
-
             Spacer()
 
             HStack(spacing: 8) {
                 if !isSinglePhotoMode {
-//                    Button(action: {
-//                        withAnimation {
-//                            showEditOptions.toggle()
-//                            if !showEditOptions {
-//                                selectedImages.removeAll()
-//                            }
-//                        }
-//                    }) {
-//                        Text("Select")
-//                            .bold()
-//                    }
-//                    .buttonStyle(.bordered)
-//                    .tint(.gray)
                     Button(selectionMode ? "Done" : "Select") {
                         selectionMode = !selectionMode
                     }
@@ -146,24 +134,17 @@ public struct ImageViewer: View {
                 if isSinglePhotoMode {
                     commentSection
                 } else {
-                    Button(action: {
-                        handleDelete()
-                    }) {
-                        Image(systemName: "trash")
-                            .font(.title3)
-                            .padding(3)
-                            .foregroundStyle(.red)
-                    }
-                    .buttonStyle(.borderless)
-                    .padding(.leading)
-                    .padding(.bottom, 16)
                     Spacer()
                 }
-                
+
                 Button(action: {
-//                        savedComment = comment
+                    if selectionMode {
+                        handleDelete()
+                    } else {
+                        // savedComment = comment
+                    }
                 }) {
-                    Text("Save")
+                    Text(selectionMode ? "Remove" : "Save")
                         .bold()
                 }
                 .buttonStyle(.borderedProminent)
@@ -172,7 +153,6 @@ public struct ImageViewer: View {
                 .padding(.bottom, 16)
             }
         }
-
     }
     
     // MARK: - Comment Section (single photo only)
@@ -216,6 +196,17 @@ public struct ImageViewer: View {
     private func handleAddMore() {
         // UIKit picker trigger should be implemented via delegate or wrapper
     }
+}
+ 
+#Preview {
+    @State  var photoAssets: [PhotoAsset] = [PhotoAsset(image: UIImage(systemName: "person")!)]
+    @State  var selectedVideo: URL? = nil
+    
+    ImageViewer(
+        assets: $photoAssets,
+        selectedVideo: $selectedVideo,
+        delegate: nil
+    )
 }
 
 
