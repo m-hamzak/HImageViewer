@@ -1,5 +1,5 @@
 //
-//  ThumbnailImageView.swift
+//  PhotoView.swift
 //  HImageViewer
 //
 //  Created by Hamza Khalid on 21/04/2025.
@@ -8,7 +8,7 @@
 import SwiftUI
 import Photos
 
-public struct ThumbnailImageView: View {
+public struct PhotoView: View {
     @State private var thumbnail: UIImage?
       let photo: PhotoAsset
 

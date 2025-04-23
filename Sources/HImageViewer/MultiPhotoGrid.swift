@@ -14,13 +14,13 @@ public struct MultiPhotoGrid: View {
     let selectedIndices: Set<Int>
     let selectionMode: Bool
     let onSelectToggle: (Int) -> Void
-    let onAddMore: () -> Void
+//    let onAddMore: () -> Void
 
     public var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), spacing: 10)], spacing: 10) {
             ForEach(Array(assets.enumerated()), id: \.1.id) { index, photo in
                 ZStack(alignment: .topTrailing) {
-                    ThumbnailImageView(photo: photo)
+                    PhotoView(photo: photo)
                         .frame(width: 100, height: 100)
                         .cornerRadius(10)
 
