@@ -9,13 +9,7 @@ import SwiftUI
 import Photos
 import AVFoundation
 
-public protocol ImageViewerDelegate: AnyObject {
-    func didAddPhotos(_ photos: [PhotoAsset])
-    func didSaveComment(_ comment: String)
-    func didDeletePhotos(_ photos: [PhotoAsset])
-}
-
-public struct ImageViewer: View {
+public struct HImageViewer: View {
     
     @Binding private var assets: [PhotoAsset]
     @Binding private var selectedVideo: URL?
@@ -54,7 +48,7 @@ public struct ImageViewer: View {
                         .cornerRadius(10)
                         .padding()
                 } else if let firstAsset = assets.first {
-                    PhotoView(photo: firstAsset)
+                    PhotoView(photo: firstAsset, isSinglePhotoMode: true)
                         .cornerRadius(10)
                         .padding()
                 }
@@ -71,9 +65,9 @@ public struct ImageViewer: View {
             BottomBar
                 
         }
-        .onDisappear {
-            delegate?.didAddPhotos(assets)
-        }
+//        .onDisappear {
+//            delegate?.didAddPhotos(assets)
+//        }
     }
     
     // MARK: - Top Bar
@@ -98,16 +92,16 @@ public struct ImageViewer: View {
                     }
                     .buttonStyle(.borderless)
                 } else {
-                    if showEditOptions {
-                        Button(action: {}) {
-                            Image(systemName: "crop")
-                                .font(.subheadline)
-                        }
-                        Button(action: {}) {
-                            Image(systemName: "pencil.tip")
-                                .font(.subheadline)
-                        }
-                    }
+//                    if showEditOptions {
+//                        Button(action: {}) {
+//                            Image(systemName: "crop")
+//                                .font(.subheadline)
+//                        }
+//                        Button(action: {}) {
+//                            Image(systemName: "pencil.tip")
+//                                .font(.subheadline)
+//                        }
+//                    }
 
                     Button(action: {
                         withAnimation {
@@ -141,7 +135,7 @@ public struct ImageViewer: View {
                     if selectionMode {
                         handleDelete()
                     } else {
-                        // savedComment = comment
+                        handleSave()
                     }
                 }) {
                     Text(selectionMode ? "Remove" : "Save")
@@ -187,26 +181,36 @@ public struct ImageViewer: View {
 
     // MARK: - Save Handling
 
-    private func handleSaveComment() {
-//        delegate?.didSaveComment(comment)
+    private func handleSave() {
+        delegate?.didSaveComment(comment)
     }
 
     // MARK: - Add More Placeholder (UIKit Picker)
-
-    private func handleAddMore() {
-        // UIKit picker trigger should be implemented via delegate or wrapper
-    }
+//
+//    private func handleAddMore() {
+//        // UIKit picker trigger should be implemented via delegate or wrapper
+//    }
 }
  
 #Preview {
     @State  var photoAssets: [PhotoAsset] = [PhotoAsset(image: UIImage(systemName: "person")!)]
     @State  var selectedVideo: URL? = nil
     
-    ImageViewer(
+    HImageViewer(
         assets: $photoAssets,
         selectedVideo: $selectedVideo,
         delegate: nil
     )
 }
 
+#Preview {
+    @State  var photoAssets: [PhotoAsset] = [PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!)]
+    @State  var selectedVideo: URL? = nil
+    
+    HImageViewer(
+        assets: $photoAssets,
+        selectedVideo: $selectedVideo,
+        delegate: nil
+    )
+}
 

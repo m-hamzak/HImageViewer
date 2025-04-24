@@ -29,6 +29,7 @@ public struct VideoPlayerView: View {
             .shadow(radius: 4)
     }
 }
+
 final class PlayerHolder: ObservableObject {
     @Published var player = AVPlayer()
 }
