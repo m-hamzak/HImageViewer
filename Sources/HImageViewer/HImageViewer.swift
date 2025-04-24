@@ -175,7 +175,7 @@ public struct HImageViewer: View {
             deletedAssets.contains(where: { $0.id == asset.id })
         }
         selectedIndices.removeAll()
-        delegate?.didDeletePhotos(deletedAssets)
+//        delegate?.didDeletePhotos(deletedAssets)
         selectionMode = false
     }
 
@@ -203,14 +203,14 @@ public struct HImageViewer: View {
     )
 }
 
-#Preview {
-    @State  var photoAssets: [PhotoAsset] = [PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!)]
-    @State  var selectedVideo: URL? = nil
-    
-    HImageViewer(
-        assets: $photoAssets,
-        selectedVideo: $selectedVideo,
-        delegate: nil
-    )
-}
+//#Preview {
+//    @State  var photoAssets: [PhotoAsset] = [PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!)]
+//    @State  var selectedVideo: URL? = nil
+//    
+//    HImageViewer(
+//        assets: $photoAssets,
+//        selectedVideo: $selectedVideo,
+//        delegate: nil
+//    )
+//}
 
