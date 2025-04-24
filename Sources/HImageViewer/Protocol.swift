@@ -6,7 +6,7 @@
 //
 
 public protocol ImageViewerDelegate: AnyObject {
-    func didAddPhotos(_ photos: [PhotoAsset])
+//    func didAddPhotos(_ photos: [PhotoAsset])
     func didSaveComment(_ comment: String)
-    func didDeletePhotos(_ photos: [PhotoAsset])
+//    func didDeletePhotos(_ photos: [PhotoAsset])
 }
