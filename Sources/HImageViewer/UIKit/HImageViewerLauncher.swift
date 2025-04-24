@@ -16,7 +16,7 @@ public final class ImageViewerLauncher {
         isSinglePhotoMode: Bool = false,
         delegate: ImageViewerDelegate? = nil
     ) {
-        let viewer = ImageViewer(
+        let viewer = HImageViewer(
             assets: .constant(assets),
             selectedVideo: .constant(selectedVideo),
             delegate: delegate

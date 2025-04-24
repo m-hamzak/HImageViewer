@@ -20,7 +20,7 @@ public struct MultiPhotoGrid: View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), spacing: 10)], spacing: 10) {
             ForEach(Array(assets.enumerated()), id: \.1.id) { index, photo in
                 ZStack(alignment: .topTrailing) {
-                    PhotoView(photo: photo)
+                    PhotoView(photo: photo, isSinglePhotoMode: false)
                         .frame(width: 100, height: 100)
                         .cornerRadius(10)
 
