@@ -74,7 +74,10 @@ public struct HImageViewer: View {
     private var TopBar: some View {
         HStack {
             if !selectionMode {
-                Button(action: { dismiss() }) {
+                Button(action: {
+                    dismiss()
+                    delegate?.didTapCloseButton()
+                }) {
                     Image(systemName: "xmark")
                         .font(.headline)
                         .padding(3)
@@ -104,9 +107,10 @@ public struct HImageViewer: View {
 //                    }
 
                     Button(action: {
-                        withAnimation {
-                            showEditOptions.toggle()
-                        }
+//                        withAnimation {
+//                              showEditOptions.toggle()
+//                        }
+                        delegate?.didTapEditButton()
                     }) {
                         Image(systemName: "pencil")
                             .font(.headline)
@@ -182,15 +186,11 @@ public struct HImageViewer: View {
     // MARK: - Save Handling
 
     private func handleSave() {
-        delegate?.didSaveComment(comment)
+        delegate?.didTapSaveButton(comment: comment, photos: assets)
     }
-
-    // MARK: - Add More Placeholder (UIKit Picker)
-//
-//    private func handleAddMore() {
-//        // UIKit picker trigger should be implemented via delegate or wrapper
-//    }
 }
+
+
  
 #Preview {
     @State  var photoAssets: [PhotoAsset] = [PhotoAsset(image: UIImage(systemName: "person")!)]
@@ -203,14 +203,14 @@ public struct HImageViewer: View {
     )
 }
 
-//#Preview {
-//    @State  var photoAssets: [PhotoAsset] = [PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!)]
-//    @State  var selectedVideo: URL? = nil
-//    
-//    HImageViewer(
-//        assets: $photoAssets,
-//        selectedVideo: $selectedVideo,
-//        delegate: nil
-//    )
-//}
+#Preview {
+    @State  var photoAssets: [PhotoAsset] = [PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!)]
+    @State  var selectedVideo: URL? = nil
+    
+    HImageViewer(
+        assets: $photoAssets,
+        selectedVideo: $selectedVideo,
+        delegate: nil
+    )
+}
 
