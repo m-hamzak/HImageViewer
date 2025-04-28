@@ -1,7 +1,3 @@
-Here’s the cleaned-up and professional version of your `README.md`, with unnecessary emojis removed and helpful badges added:
-
----
-
 # HImageViewer
 
 [![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)](https://swift.org)
