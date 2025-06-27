@@ -18,7 +18,7 @@ public struct HImageViewer: View {
 
     @State private var selectionMode: Bool = false
     @State private var selectedIndices: Set<Int> = []
-    @State private var comment: String = ""
+    @State private var comment: String
 
     @State private var showEditOptions: Bool = false
     @State private var selectedImages: Set<Int> = []
@@ -27,10 +27,12 @@ public struct HImageViewer: View {
     public init(
         assets: Binding<[PhotoAsset]>,
         selectedVideo: Binding<URL?>,
+        comment: String? = nil,
         delegate: ImageViewerDelegate? = nil
     ) {
         self._assets = assets
         self._selectedVideo = selectedVideo
+        self._comment = State(initialValue: comment ?? "") // Set the initial value
         self.isSinglePhotoMode = assets.wrappedValue.count == 1
         self.delegate = delegate
     }
@@ -59,9 +61,9 @@ public struct HImageViewer: View {
                     selectionMode: selectionMode,
                     onSelectToggle: handleSelection
                 )
+                Spacer()
             }
 
-            Spacer()
             BottomBar
                 
         }
@@ -127,7 +129,6 @@ public struct HImageViewer: View {
     // MARK: - Bottom Bar
     private var BottomBar: some View {
         VStack {
-            Spacer()
             HStack {
                 if isSinglePhotoMode {
                     commentSection
