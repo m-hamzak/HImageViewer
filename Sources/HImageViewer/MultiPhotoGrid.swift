@@ -22,7 +22,7 @@ public struct MultiPhotoGrid: View {
                 ZStack(alignment: .topTrailing) {
                     PhotoView(photo: photo, isSinglePhotoMode: false)
                         .frame(width: 100, height: 100)
-                        .cornerRadius(10)
+                        .cornerRadius(12)
 
                     if selectionMode {
                         Button(action: {
