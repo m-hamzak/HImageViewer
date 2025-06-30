@@ -18,7 +18,7 @@ public struct HImageViewer: View {
 
     @State private var selectionMode: Bool = false
     @State private var selectedIndices: Set<Int> = []
-    @State private var comment: String = ""
+    @State private var comment: String
 
     @State private var showEditOptions: Bool = false
     @State private var selectedImages: Set<Int> = []
@@ -27,10 +27,12 @@ public struct HImageViewer: View {
     public init(
         assets: Binding<[PhotoAsset]>,
         selectedVideo: Binding<URL?>,
+        comment: String? = nil,
         delegate: ImageViewerDelegate? = nil
     ) {
         self._assets = assets
         self._selectedVideo = selectedVideo
+        self._comment = State(initialValue: comment ?? "") // Set the initial value
         self.isSinglePhotoMode = assets.wrappedValue.count == 1
         self.delegate = delegate
     }
@@ -45,11 +47,10 @@ public struct HImageViewer: View {
             if isSinglePhotoMode {
                 if let videoURL = selectedVideo {
                     VideoPlayerView(videoURL: videoURL)
-                        .cornerRadius(10)
+                        .cornerRadius(12)
                         .padding()
                 } else if let firstAsset = assets.first {
                     PhotoView(photo: firstAsset, isSinglePhotoMode: true)
-                        .cornerRadius(10)
                         .padding()
                 }
             } else {
@@ -59,9 +60,9 @@ public struct HImageViewer: View {
                     selectionMode: selectionMode,
                     onSelectToggle: handleSelection
                 )
+                Spacer()
             }
 
-            Spacer()
             BottomBar
                 
         }
@@ -74,7 +75,10 @@ public struct HImageViewer: View {
     private var TopBar: some View {
         HStack {
             if !selectionMode {
-                Button(action: { dismiss() }) {
+                Button(action: {
+                    dismiss()
+                    delegate?.didTapCloseButton()
+                }) {
                     Image(systemName: "xmark")
                         .font(.headline)
                         .padding(3)
@@ -104,9 +108,10 @@ public struct HImageViewer: View {
 //                    }
 
                     Button(action: {
-                        withAnimation {
-                            showEditOptions.toggle()
-                        }
+//                        withAnimation {
+//                              showEditOptions.toggle()
+//                        }
+                        delegate?.didTapEditButton()
                     }) {
                         Image(systemName: "pencil")
                             .font(.headline)
@@ -123,7 +128,6 @@ public struct HImageViewer: View {
     // MARK: - Bottom Bar
     private var BottomBar: some View {
         VStack {
-            Spacer()
             HStack {
                 if isSinglePhotoMode {
                     commentSection
@@ -182,15 +186,11 @@ public struct HImageViewer: View {
     // MARK: - Save Handling
 
     private func handleSave() {
-        delegate?.didSaveComment(comment)
+        delegate?.didTapSaveButton(comment: comment, photos: assets)
     }
-
-    // MARK: - Add More Placeholder (UIKit Picker)
-//
-//    private func handleAddMore() {
-//        // UIKit picker trigger should be implemented via delegate or wrapper
-//    }
 }
+
+
  
 #Preview {
     @State  var photoAssets: [PhotoAsset] = [PhotoAsset(image: UIImage(systemName: "person")!)]
@@ -203,14 +203,14 @@ public struct HImageViewer: View {
     )
 }
 
-//#Preview {
-//    @State  var photoAssets: [PhotoAsset] = [PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!)]
-//    @State  var selectedVideo: URL? = nil
-//    
-//    HImageViewer(
-//        assets: $photoAssets,
-//        selectedVideo: $selectedVideo,
-//        delegate: nil
-//    )
-//}
+#Preview {
+    @State  var photoAssets: [PhotoAsset] = [PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!)]
+    @State  var selectedVideo: URL? = nil
+    
+    HImageViewer(
+        assets: $photoAssets,
+        selectedVideo: $selectedVideo,
+        delegate: nil
+    )
+}
 
