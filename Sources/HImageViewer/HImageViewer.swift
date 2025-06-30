@@ -47,11 +47,10 @@ public struct HImageViewer: View {
             if isSinglePhotoMode {
                 if let videoURL = selectedVideo {
                     VideoPlayerView(videoURL: videoURL)
-                        .cornerRadius(10)
+                        .cornerRadius(12)
                         .padding()
                 } else if let firstAsset = assets.first {
                     PhotoView(photo: firstAsset, isSinglePhotoMode: true)
-                        .cornerRadius(10)
                         .padding()
                 }
             } else {

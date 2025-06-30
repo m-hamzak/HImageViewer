@@ -15,30 +15,27 @@ public struct PhotoView: View {
     let isSinglePhotoMode: Bool
     
     public var body: some View {
-        GeometryReader { proxy in
-            VStack {
-                Spacer()
-                if let image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .clipped()
-                } else if didFailToLoad {
-                    Color.red.opacity(0.2)
-                        .overlay(
-                            Image(systemName: "exclamationmark.triangle")
-                                .foregroundColor(.red)
-                                .font(.largeTitle)
-                        )
-                } else {
-                    Color.gray.opacity(0.2)
-                        .overlay(
-                            ProgressView()
-                        )
-                }
-                Spacer()
+        VStack {
+            Spacer()
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .cornerRadius(12) 
+            } else if didFailToLoad {
+                Color.red.opacity(0.2)
+                    .overlay(
+                        Image(systemName: "exclamationmark.triangle")
+                            .foregroundColor(.red)
+                            .font(.largeTitle)
+                    )
+            } else {
+                Color.gray.opacity(0.2)
+                    .overlay(
+                        ProgressView()
+                    )
             }
+            Spacer()
         }
         .onAppear {
             guard image == nil && !didFailToLoad else { return }
