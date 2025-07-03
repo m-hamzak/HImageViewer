@@ -13,15 +13,16 @@ public final class ImageViewerLauncher {
         from viewController: UIViewController,
         assets: [PhotoAsset],
         selectedVideo: URL? = nil,
-        isSinglePhotoMode: Bool = false,
+        comment: String? = nil,
         delegate: ImageViewerDelegate? = nil
     ) {
         let viewer = HImageViewer(
             assets: .constant(assets),
             selectedVideo: .constant(selectedVideo),
+            comment: comment,
             delegate: delegate
         )
-        
+
         let hostingController = UIHostingController(rootView: viewer)
         hostingController.modalPresentationStyle = .fullScreen
         viewController.present(hostingController, animated: true)
