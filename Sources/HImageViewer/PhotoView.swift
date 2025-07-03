@@ -40,6 +40,22 @@ public struct PhotoView: View {
         .onAppear {
             guard image == nil && !didFailToLoad else { return }
             
+            if let url = photo.imageURL {
+                // Load image from remote URL
+                DispatchQueue.global().async {
+                    if let data = try? Data(contentsOf: url), let loadedImage = UIImage(data: data) {
+                        DispatchQueue.main.async {
+                            self.image = loadedImage
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            self.didFailToLoad = true
+                        }
+                    }
+                }
+                return
+            }
+            
             let completion: (UIImage?) -> Void = { img in
                 if let img = img {
                     self.image = img
