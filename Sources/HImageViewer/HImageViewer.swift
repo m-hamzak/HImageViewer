@@ -33,7 +33,7 @@ public struct HImageViewer: View {
         self._assets = assets
         self._selectedVideo = selectedVideo
         self._comment = State(initialValue: comment ?? "") // Set the initial value
-        self.isSinglePhotoMode = assets.wrappedValue.count == 1
+        self.isSinglePhotoMode = assets.wrappedValue.count == 1 || selectedVideo.wrappedValue != nil
         self.delegate = delegate
     }
 
@@ -47,7 +47,6 @@ public struct HImageViewer: View {
             if isSinglePhotoMode {
                 if let videoURL = selectedVideo {
                     VideoPlayerView(videoURL: videoURL)
-                        .cornerRadius(12)
                         .padding()
                 } else if let firstAsset = assets.first {
                     PhotoView(photo: firstAsset, isSinglePhotoMode: true)
