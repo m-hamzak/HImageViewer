@@ -14,19 +14,24 @@ public struct VideoPlayerView: View {
     @StateObject private var playerHolder = PlayerHolder()
 
     public var body: some View {
-        VideoPlayer(player: playerHolder.player)
-            .onAppear {
-                if playerHolder.player.currentItem == nil {
-                    playerHolder.player.replaceCurrentItem(with: AVPlayerItem(url: videoURL))
+        VStack {
+            Spacer()
+            VideoPlayer(player: playerHolder.player)
+                .onAppear {
+                    let item = AVPlayerItem(url: videoURL)
+                    playerHolder.player.replaceCurrentItem(with: item)
+                    playerHolder.player.seek(to: .zero)
+                    playerHolder.player.play()
                 }
-                playerHolder.player.play()
-            }
-            .onDisappear {
-                playerHolder.player.pause()
-            }
-            .frame(height: 300)
-            .cornerRadius(12)
-            .shadow(radius: 4)
+                .onDisappear {
+                    playerHolder.player.pause()
+                }
+                .frame(height: 300)
+                .cornerRadius(12)
+                .shadow(radius: 4)
+            Spacer()
+        }
+
     }
 }
 

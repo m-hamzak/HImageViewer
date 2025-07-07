@@ -30,7 +30,7 @@ public struct PhotoView: View {
                             .font(.largeTitle)
                     )
             } else {
-                Color.gray.opacity(0.2)
+                Color.gray.opacity(0.1)
                     .overlay(
                         ProgressView()
                     )
