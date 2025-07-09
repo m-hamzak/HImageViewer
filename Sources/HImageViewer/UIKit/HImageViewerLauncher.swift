@@ -13,14 +13,12 @@ public final class ImageViewerLauncher {
         from viewController: UIViewController,
         assets: [PhotoAsset],
         selectedVideo: URL? = nil,
-        comment: String? = nil,
-        delegate: ImageViewerDelegate? = nil
+        configuration: HImageViewerConfiguration
     ) {
         let viewer = HImageViewer(
             assets: .constant(assets),
             selectedVideo: .constant(selectedVideo),
-            comment: comment,
-            delegate: delegate
+            configuration: configuration
         )
 
         let hostingController = UIHostingController(rootView: viewer)
