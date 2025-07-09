@@ -10,39 +10,66 @@ import Photos
 import AVFoundation
 
 public struct HImageViewer: View {
-    
+
     @Binding private var assets: [PhotoAsset]
     @Binding private var selectedVideo: URL?
-    private let isSinglePhotoMode: Bool
-    private weak var delegate: ImageViewerDelegate?
 
     @State private var selectionMode: Bool = false
     @State private var selectedIndices: Set<Int> = []
     @State private var comment: String
-
     @State private var showEditOptions: Bool = false
     @State private var selectedImages: Set<Int> = []
+
     @Environment(\.dismiss) private var dismiss
     
+    private let config: HImageViewerConfiguration
+    private weak var delegate: ImageViewerDelegate?
+    
+    private var isSinglePhotoMode: Bool {
+        assets.count == 1
+    }
+
+    public struct Configuration {
+        public let title: String?
+        public let showCommentBox: Bool
+        public let showSaveButton: Bool
+        
+        public init(
+            title: String? = nil,
+            showCommentBox: Bool = true,
+            showSaveButton: Bool = true
+        ) {
+            self.title = title
+            self.showCommentBox = showCommentBox
+            self.showSaveButton = showSaveButton
+        }
+    }
+
     public init(
         assets: Binding<[PhotoAsset]>,
         selectedVideo: Binding<URL?>,
-        comment: String? = nil,
-        delegate: ImageViewerDelegate? = nil
+        configuration: HImageViewerConfiguration = .init()
     ) {
         self._assets = assets
         self._selectedVideo = selectedVideo
-        self._comment = State(initialValue: comment ?? "") // Set the initial value
-        self.isSinglePhotoMode = assets.wrappedValue.count == 1 || selectedVideo.wrappedValue != nil
-        self.delegate = delegate
+        self.config = configuration
+        self._comment = State(initialValue: config.showCommentBox ? (config.title ?? "") : "")
+        self.delegate = configuration.delegate
     }
 
     public var body: some View {
         VStack {
             
-            TopBar
-                .padding(.horizontal)
-                .padding(.top, 12)
+//            TopBar
+//                .padding(.horizontal)
+//                .padding(.top, 12)
+           TopBar(config: TopBarConfig (
+                isSinglePhotoMode: isSinglePhotoMode,
+                selectionMode: selectionMode,
+                onDismiss: { dismiss(); delegate?.didTapCloseButton() },
+                onSelectToggle: { selectionMode.toggle() },
+                onEdit: { delegate?.didTapEditButton() }
+            ))
             
             if isSinglePhotoMode {
                 if let videoURL = selectedVideo {
@@ -62,7 +89,15 @@ public struct HImageViewer: View {
                 Spacer()
             }
 
-            BottomBar
+            BottomBar(comment: $comment, config: BottomBarConfig(
+                 isSinglePhotoMode: isSinglePhotoMode,
+                 selectionMode: selectionMode,
+                 showSaveButton: config.showSaveButton,
+                 showCommentBox: config.showCommentBox,
+                 title: config.title,
+                 onSave: { handleSave() },
+                 onDelete: { handleDelete() }
+             ))
                 
         }
 //        .onDisappear {
@@ -70,96 +105,6 @@ public struct HImageViewer: View {
 //        }
     }
     
-    // MARK: - Top Bar
-    private var TopBar: some View {
-        HStack {
-            if !selectionMode {
-                Button(action: {
-                    dismiss()
-                    delegate?.didTapCloseButton()
-                }) {
-                    Image(systemName: "xmark")
-                        .font(.headline)
-                        .padding(3)
-                        .foregroundStyle(.gray)
-                }
-                .buttonStyle(.bordered)
-                .clipShape(Circle())
-            }
-            Spacer()
-
-            HStack(spacing: 8) {
-                if !isSinglePhotoMode {
-                    Button(selectionMode ? "Done" : "Select") {
-                        selectionMode = !selectionMode
-                    }
-                    .buttonStyle(.borderless)
-                } else {
-//                    if showEditOptions {
-//                        Button(action: {}) {
-//                            Image(systemName: "crop")
-//                                .font(.subheadline)
-//                        }
-//                        Button(action: {}) {
-//                            Image(systemName: "pencil.tip")
-//                                .font(.subheadline)
-//                        }
-//                    }
-
-                    Button(action: {
-//                        withAnimation {
-//                              showEditOptions.toggle()
-//                        }
-                        delegate?.didTapEditButton()
-                    }) {
-                        Image(systemName: "pencil")
-                            .font(.headline)
-                            .padding(3)
-                            .foregroundStyle(.gray)
-                    }
-                    .buttonStyle(.bordered)
-                    .clipShape(Circle())
-                }
-            }
-        }
-    }
-    
-    // MARK: - Bottom Bar
-    private var BottomBar: some View {
-        VStack {
-            HStack {
-                if isSinglePhotoMode {
-                    commentSection
-                } else {
-                    Spacer()
-                }
-
-                Button(action: {
-                    if selectionMode {
-                        handleDelete()
-                    } else {
-                        handleSave()
-                    }
-                }) {
-                    Text(selectionMode ? "Remove" : "Save")
-                        .bold()
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.gray)
-                .padding(.trailing)
-                .padding(.bottom, 16)
-            }
-        }
-    }
-    
-    // MARK: - Comment Section (single photo only)
-    private var commentSection: some View {
-            TextField("Add a comment ...", text: $comment)
-                .textFieldStyle(.roundedBorder)
-                .padding([.horizontal, .bottom])
-                .frame(minHeight: 50)
-    }
-
     // MARK: - Selection Handling
 
     private func handleSelection(_ index: Int) {
@@ -197,19 +142,17 @@ public struct HImageViewer: View {
     
     HImageViewer(
         assets: $photoAssets,
-        selectedVideo: $selectedVideo,
-        delegate: nil
+        selectedVideo: $selectedVideo
     )
 }
 
 #Preview {
     @State  var photoAssets: [PhotoAsset] = [PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!)]
     @State  var selectedVideo: URL? = nil
-    
+
     HImageViewer(
         assets: $photoAssets,
-        selectedVideo: $selectedVideo,
-        delegate: nil
+        selectedVideo: $selectedVideo
     )
 }
 
