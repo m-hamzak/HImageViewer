@@ -21,7 +21,7 @@ public struct MultiPhotoGrid: View {
             ForEach(Array(assets.enumerated()), id: \.1.id) { index, photo in
                 ZStack(alignment: .topTrailing) {
                     PhotoView(photo: photo, isSinglePhotoMode: false)
-                        .frame(width: 100, height: 100)
+                        .frame(width: 130, height: 130)
                         .cornerRadius(12)
 
                     if selectionMode {
@@ -29,7 +29,7 @@ public struct MultiPhotoGrid: View {
                             onSelectToggle(index)
                         }) {
                             Image(systemName: selectedIndices.contains(index) ? "checkmark.circle.fill" : "circle")
-                                .font(.system(size: 20))
+                                .font(.system(size: 25))
                                 .foregroundColor(selectedIndices.contains(index) ? .blue : .gray)
                                 .padding(6)
                         }
