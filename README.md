@@ -158,12 +158,6 @@ protocol ImageViewerDelegate: AnyObject {
 
 ---
 
-## 📜 License
-
-MIT — see [LICENSE](./LICENSE).
-
----
-
 ### Notes
 ✅ Orientation support confirmed.  
 ✅ Progress indicator planned but not baked in yet (external via delegate).  
