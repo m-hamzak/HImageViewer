@@ -21,6 +21,7 @@ public struct HImageViewer: View {
     @State private var selectedImages: Set<Int> = []
 
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject var uploadState: HImageViewerUploadState
     
     private let config: HImageViewerConfiguration
     private weak var delegate: ImageViewerDelegate?
@@ -55,50 +56,73 @@ public struct HImageViewer: View {
         self.config = configuration
         self._comment = State(initialValue: config.showCommentBox ? (config.title ?? "") : "")
         self.delegate = configuration.delegate
+        if let provided = config.uploadState {
+                uploadState = provided
+            } else {
+                uploadState = HImageViewerUploadState()
+            }
     }
 
     public var body: some View {
-        VStack {
-            
-//            TopBar
-//                .padding(.horizontal)
-//                .padding(.top, 12)
-           TopBar(config: TopBarConfig (
-                isSinglePhotoMode: isSinglePhotoMode,
-                selectionMode: selectionMode,
-                onDismiss: { dismiss(); delegate?.didTapCloseButton() },
-                onSelectToggle: { selectionMode.toggle() },
-                onEdit: { delegate?.didTapEditButton() }
-            ))
-            
-            if isSinglePhotoMode {
-                if let videoURL = selectedVideo {
-                    VideoPlayerView(videoURL: videoURL)
-                        .padding()
-                } else if let firstAsset = assets.first {
-                    PhotoView(photo: firstAsset, isSinglePhotoMode: true)
-                        .padding()
-                }
-            } else {
-                MultiPhotoGrid (
-                    assets: assets,
-                    selectedIndices: selectedIndices,
-                    selectionMode: selectionMode,
-                    onSelectToggle: handleSelection
-                )
-                Spacer()
-            }
+        ZStack {
+            VStack {
 
-            BottomBar(comment: $comment, config: BottomBarConfig(
-                 isSinglePhotoMode: isSinglePhotoMode,
-                 selectionMode: selectionMode,
-                 showSaveButton: config.showSaveButton,
-                 showCommentBox: config.showCommentBox,
-                 title: config.title,
-                 onSave: { handleSave() },
-                 onDelete: { handleDelete() }
-             ))
+                TopBar(config: TopBarConfig (
+                    isSinglePhotoMode: isSinglePhotoMode,
+                    selectionMode: selectionMode,
+                    onDismiss: { dismiss(); delegate?.didTapCloseButton() },
+                    onSelectToggle: { selectionMode.toggle() },
+                    onEdit: { delegate?.didTapEditButton() }
+                ))
                 
+                if isSinglePhotoMode {
+                    if let videoURL = selectedVideo {
+                        VideoPlayerView(videoURL: videoURL)
+                            .padding()
+                    } else if let firstAsset = assets.first {
+                        PhotoView(photo: firstAsset, isSinglePhotoMode: true)
+                            .padding()
+                    }
+                } else {
+                    MultiPhotoGrid (
+                        assets: assets,
+                        selectedIndices: selectedIndices,
+                        selectionMode: selectionMode,
+                        onSelectToggle: handleSelection
+                    )
+                    Spacer()
+                }
+                
+                BottomBar(comment: $comment, config: BottomBarConfig(
+                    isSinglePhotoMode: isSinglePhotoMode,
+                    selectionMode: selectionMode,
+                    showSaveButton: config.showSaveButton,
+                    showCommentBox: config.showCommentBox,
+                    title: config.title,
+                    onSave: { handleSave() },
+                    onDelete: { handleDelete() }
+                ))
+                
+            }
+            
+                if let progress = uploadState.progress {
+                VStack {
+                    Spacer()
+                        ProgressRingOverlayView(progress: progress, title: "Uploading")
+                            .padding()
+                            .opacity(progress < 1.0 ? 1 : 0)
+                                    .animation(.easeOut(duration: 0.3), value: progress)
+                                    .onChange(of: progress) { newProgress in
+                                                guard newProgress >= 1 else { return }
+                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                                        dismiss()
+                                                    }
+                                            }
+                    
+                    Spacer()
+                }
+                .transition(.opacity)
+            }
         }
 //        .onDisappear {
 //            delegate?.didAddPhotos(assets)
@@ -130,7 +154,7 @@ public struct HImageViewer: View {
     // MARK: - Save Handling
 
     private func handleSave() {
-        delegate?.didTapSaveButton(comment: comment, photos: assets)
+        delegate?.didTapSaveButton(comment: comment, photos: assets, uploadState: uploadState)
     }
 }
 

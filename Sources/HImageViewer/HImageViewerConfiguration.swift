@@ -11,19 +11,23 @@ public struct HImageViewerConfiguration {
     public let showCommentBox: Bool
     public let showSaveButton: Bool
     public let title: String?
+    public let uploadState: HImageViewerUploadState?
+
     
     public init(
         initialComment: String? = nil,
         delegate: ImageViewerDelegate? = nil,
         showCommentBox: Bool = true,
         showSaveButton: Bool = true,
-        title: String? = nil
+        title: String? = nil,
+        uploadState: HImageViewerUploadState? = nil
     ) {
         self.initialComment = initialComment
         self.delegate = delegate
         self.showCommentBox = showCommentBox
         self.showSaveButton = showSaveButton
         self.title = title
+        self.uploadState = uploadState
     }
 }
 //public struct HImageViewerConfiguration {
