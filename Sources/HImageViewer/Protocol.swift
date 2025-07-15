@@ -6,7 +6,8 @@
 //
 
 public protocol ImageViewerDelegate: AnyObject {
-    func didTapSaveButton( comment: String, photos: [PhotoAsset])
+    func didTapSaveButton( comment: String, photos: [PhotoAsset], uploadState: HImageViewerUploadState)
     func didTapCloseButton()
     func didTapEditButton()
 }
+
