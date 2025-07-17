@@ -24,10 +24,13 @@ public struct HImageViewer: View {
     @ObservedObject var uploadState: HImageViewerUploadState
     
     private let config: HImageViewerConfiguration
-    private weak var delegate: ImageViewerDelegate?
+    private weak var delegate: HImageViewerControlDelegate?
     
     private var isSinglePhotoMode: Bool {
         assets.count == 1
+    }
+    private var isUploading: Bool {
+        (uploadState.progress ?? 0) > 0 && (uploadState.progress ?? 0) < 1.0
     }
 
     public struct Configuration {
@@ -65,45 +68,13 @@ public struct HImageViewer: View {
 
     public var body: some View {
         ZStack {
-            VStack {
-
-                TopBar(config: TopBarConfig (
-                    isSinglePhotoMode: isSinglePhotoMode,
-                    selectionMode: selectionMode,
-                    onDismiss: { dismiss(); delegate?.didTapCloseButton() },
-                    onSelectToggle: { selectionMode.toggle() },
-                    onEdit: { delegate?.didTapEditButton() }
-                ))
-                
-                if isSinglePhotoMode {
-                    if let videoURL = selectedVideo {
-                        VideoPlayerView(videoURL: videoURL)
-                            .padding()
-                    } else if let firstAsset = assets.first {
-                        PhotoView(photo: firstAsset, isSinglePhotoMode: true)
-                            .padding()
+            mainComponent
+            .onAppear {
+                        if uploadState.progress == 1.0 {
+                            uploadState.progress = nil
+                        }
                     }
-                } else {
-                    MultiPhotoGrid (
-                        assets: assets,
-                        selectedIndices: selectedIndices,
-                        selectionMode: selectionMode,
-                        onSelectToggle: handleSelection
-                    )
-                    Spacer()
-                }
-                
-                BottomBar(comment: $comment, config: BottomBarConfig(
-                    isSinglePhotoMode: isSinglePhotoMode,
-                    selectionMode: selectionMode,
-                    showSaveButton: config.showSaveButton,
-                    showCommentBox: config.showCommentBox,
-                    title: config.title,
-                    onSave: { handleSave() },
-                    onDelete: { handleDelete() }
-                ))
-                
-            }
+            .disabled(uploadState.progress ?? 0 > 0)
             
                 if let progress = uploadState.progress {
                 VStack {
@@ -124,9 +95,52 @@ public struct HImageViewer: View {
                 .transition(.opacity)
             }
         }
+      
 //        .onDisappear {
 //            delegate?.didAddPhotos(assets)
 //        }
+    }
+    
+    private var mainComponent: some View {
+        VStack {
+
+            TopBar(config: TopBarConfig (
+                isSinglePhotoMode: isSinglePhotoMode,
+                selectionMode: selectionMode,
+                onDismiss: { dismiss(); delegate?.didTapCloseButton() },
+                onSelectToggle: { selectionMode.toggle() },
+                onEdit: { delegate?.didTapEditButton() }
+            ))
+            
+            if isSinglePhotoMode {
+                if let videoURL = selectedVideo {
+                    VideoPlayerView(videoURL: videoURL)
+                        .padding()
+                } else if let firstAsset = assets.first {
+                    PhotoView(photo: firstAsset, isSinglePhotoMode: true)
+                        .padding()
+                }
+            } else {
+                MultiPhotoGrid (
+                    assets: assets,
+                    selectedIndices: selectedIndices,
+                    selectionMode: selectionMode,
+                    onSelectToggle: handleSelection
+                )
+                Spacer()
+            }
+            
+            BottomBar(comment: $comment, config: BottomBarConfig(
+                isSinglePhotoMode: isSinglePhotoMode,
+                selectionMode: selectionMode,
+                showSaveButton: config.showSaveButton,
+                showCommentBox: config.showCommentBox,
+                title: config.title,
+                onSave: { handleSave() },
+                onDelete: { handleDelete() }
+            ))
+            
+        }
     }
     
     // MARK: - Selection Handling
@@ -154,7 +168,7 @@ public struct HImageViewer: View {
     // MARK: - Save Handling
 
     private func handleSave() {
-        delegate?.didTapSaveButton(comment: comment, photos: assets, uploadState: uploadState)
+        delegate?.didTapSaveButton(comment: comment, photos: assets)
     }
 }
 
