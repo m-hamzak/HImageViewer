@@ -7,7 +7,7 @@
 
 public struct HImageViewerConfiguration {
     public let initialComment: String?
-    public let delegate: ImageViewerDelegate?
+    public let delegate: HImageViewerControlDelegate?
     public let showCommentBox: Bool
     public let showSaveButton: Bool
     public let title: String?
@@ -16,7 +16,7 @@ public struct HImageViewerConfiguration {
     
     public init(
         initialComment: String? = nil,
-        delegate: ImageViewerDelegate? = nil,
+        delegate: HImageViewerControlDelegate? = nil,
         showCommentBox: Bool = true,
         showSaveButton: Bool = true,
         title: String? = nil,
