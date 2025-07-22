@@ -17,9 +17,8 @@ struct BottomBar: View {
             HStack {
                 if config.isSinglePhotoMode {
                     textSection
-                } else {
-                    Spacer()
                 }
+                    Spacer()
 
                 if config.showSaveButton {
                     Button(action: {
