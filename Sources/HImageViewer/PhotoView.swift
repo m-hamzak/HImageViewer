@@ -46,6 +46,7 @@ public struct PhotoView: View {
                     if let data = try? Data(contentsOf: url), let loadedImage = UIImage(data: data) {
                         DispatchQueue.main.async {
                             self.image = loadedImage
+                            self.photo.image = loadedImage
                         }
                     } else {
                         DispatchQueue.main.async {
