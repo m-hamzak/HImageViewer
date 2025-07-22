@@ -10,6 +10,7 @@ public struct HImageViewerConfiguration {
     public let delegate: HImageViewerControlDelegate?
     public let showCommentBox: Bool
     public let showSaveButton: Bool
+    public let showEditButton: Bool
     public let title: String?
     public let uploadState: HImageViewerUploadState?
 
@@ -19,6 +20,7 @@ public struct HImageViewerConfiguration {
         delegate: HImageViewerControlDelegate? = nil,
         showCommentBox: Bool = true,
         showSaveButton: Bool = true,
+        showEditButton: Bool = true,
         title: String? = nil,
         uploadState: HImageViewerUploadState? = nil
     ) {
@@ -26,6 +28,7 @@ public struct HImageViewerConfiguration {
         self.delegate = delegate
         self.showCommentBox = showCommentBox
         self.showSaveButton = showSaveButton
+        self.showEditButton = showEditButton
         self.title = title
         self.uploadState = uploadState
     }

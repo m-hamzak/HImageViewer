@@ -37,15 +37,18 @@ public struct HImageViewer: View {
         public let title: String?
         public let showCommentBox: Bool
         public let showSaveButton: Bool
+        public let showEditButton: Bool
         
         public init(
             title: String? = nil,
             showCommentBox: Bool = true,
-            showSaveButton: Bool = true
+            showSaveButton: Bool = true,
+            showEditButton: Bool = true
         ) {
             self.title = title
             self.showCommentBox = showCommentBox
             self.showSaveButton = showSaveButton
+            self.showEditButton = showEditButton
         }
     }
 
@@ -106,10 +109,11 @@ public struct HImageViewer: View {
 
             TopBar(config: TopBarConfig (
                 isSinglePhotoMode: isSinglePhotoMode,
+                showEditButton: config.showEditButton,
                 selectionMode: selectionMode,
                 onDismiss: { dismiss(); delegate?.didTapCloseButton() },
                 onSelectToggle: { selectionMode.toggle() },
-                onEdit: { delegate?.didTapEditButton() }
+                onEdit: { delegate?.didTapEditButton(photo: assets.first!) }
             ))
             
             if isSinglePhotoMode {
