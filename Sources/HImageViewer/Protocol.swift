@@ -8,5 +8,5 @@
 public protocol HImageViewerControlDelegate: AnyObject {
     func didTapSaveButton( comment: String, photos: [PhotoAsset])
     func didTapCloseButton()
-    func didTapEditButton()
+    func didTapEditButton(photo: PhotoAsset)
 }

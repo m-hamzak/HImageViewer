@@ -17,7 +17,9 @@ struct TopBar: View {
             }
             Spacer()
             if config.isSinglePhotoMode {
-                CircleButton(systemName: "pencil", action: config.onEdit)
+                if config.showEditButton {
+                    CircleButton(systemName: "pencil", action: config.onEdit)
+                }
             } else {
                 Button(config.selectionMode ? "Done" : "Select", action: config.onSelectToggle)
                     .buttonStyle(.borderless)
@@ -32,6 +34,7 @@ struct TopBar: View {
 
 struct TopBarConfig {
     var isSinglePhotoMode: Bool
+    var showEditButton: Bool
     var selectionMode: Bool
     var onDismiss: () -> Void
     var onSelectToggle: () -> Void
