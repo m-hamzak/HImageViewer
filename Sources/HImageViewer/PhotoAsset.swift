@@ -8,10 +8,10 @@
 import UIKit
 import Photos
 
-public class PhotoAsset: Identifiable, Equatable {
+public class PhotoAsset: ObservableObject, Identifiable, Equatable {
     public let id = UUID()
     public let phAsset: PHAsset?
-    public var image: UIImage?
+    @Published public var image: UIImage?
     public var imageURL: URL?
     public var isSelected: Bool = false
 
