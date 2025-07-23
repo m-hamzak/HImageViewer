@@ -49,9 +49,9 @@ public struct HImageViewer: View {
         
         public init(
             title: String? = nil,
-            showCommentBox: Bool = true,
-            showSaveButton: Bool = true,
-            showEditButton: Bool = true
+            showCommentBox: Bool = false,
+            showSaveButton: Bool = false,
+            showEditButton: Bool = false
         ) {
             self.title = title
             self.showCommentBox = showCommentBox
