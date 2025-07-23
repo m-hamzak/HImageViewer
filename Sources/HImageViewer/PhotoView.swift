@@ -9,15 +9,15 @@ import SwiftUI
 import Photos
 
 public struct PhotoView: View {
-    @State private var image: UIImage?
+    
     @State private var didFailToLoad: Bool = false
-    let photo: PhotoAsset
+    @ObservedObject var photo: PhotoAsset
     let isSinglePhotoMode: Bool
     
     public var body: some View {
         VStack {
             Spacer()
-            if let image {
+            if let image = photo.image {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
@@ -38,14 +38,13 @@ public struct PhotoView: View {
             Spacer()
         }
         .onAppear {
-            guard image == nil && !didFailToLoad else { return }
+            guard photo.image == nil && !didFailToLoad else { return }
             
             if let url = photo.imageURL {
                 // Load image from remote URL
                 DispatchQueue.global().async {
                     if let data = try? Data(contentsOf: url), let loadedImage = UIImage(data: data) {
                         DispatchQueue.main.async {
-                            self.image = loadedImage
                             self.photo.image = loadedImage
                         }
                     } else {
@@ -59,7 +58,7 @@ public struct PhotoView: View {
             
             let completion: (UIImage?) -> Void = { img in
                 if let img = img {
-                    self.image = img
+                    self.photo.image = img
                 } else {
                     self.didFailToLoad = true
                 }

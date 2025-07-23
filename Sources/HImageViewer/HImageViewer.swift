@@ -19,6 +19,7 @@ public struct HImageViewer: View {
     @State private var comment: String
     @State private var showEditOptions: Bool = false
     @State private var selectedImages: Set<Int> = []
+    @State private var wasImageEdited = false
 
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var uploadState: HImageViewerUploadState
@@ -31,6 +32,13 @@ public struct HImageViewer: View {
     }
     private var isUploading: Bool {
         (uploadState.progress ?? 0) > 0 && (uploadState.progress ?? 0) < 1.0
+    }
+    var shouldShowSaveButton: Bool {
+        if isSinglePhotoMode {
+            return wasImageEdited || config.showSaveButton
+        } else {
+            return config.showSaveButton
+        }
     }
 
     public struct Configuration {
@@ -98,10 +106,6 @@ public struct HImageViewer: View {
                 .transition(.opacity)
             }
         }
-      
-//        .onDisappear {
-//            delegate?.didAddPhotos(assets)
-//        }
     }
     
     private var mainComponent: some View {
@@ -137,13 +141,18 @@ public struct HImageViewer: View {
             BottomBar(comment: $comment, config: BottomBarConfig(
                 isSinglePhotoMode: isSinglePhotoMode,
                 selectionMode: selectionMode,
-                showSaveButton: config.showSaveButton,
+                showSaveButton: shouldShowSaveButton,
                 showCommentBox: config.showCommentBox,
                 title: config.title,
                 onSave: { handleSave() },
                 onDelete: { handleDelete() }
             ))
             
+        }
+        .onChange(of: assets.first?.image) { _ in
+           if isSinglePhotoMode {
+                wasImageEdited = true
+            }
         }
     }
     
@@ -165,7 +174,6 @@ public struct HImageViewer: View {
             deletedAssets.contains(where: { $0.id == asset.id })
         }
         selectedIndices.removeAll()
-//        delegate?.didDeletePhotos(deletedAssets)
         selectionMode = false
     }
 
