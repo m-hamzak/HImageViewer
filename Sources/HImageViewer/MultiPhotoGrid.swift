@@ -15,13 +15,15 @@ public struct MultiPhotoGrid: View {
     let selectionMode: Bool
     let onSelectToggle: (Int) -> Void
 //    let onAddMore: () -> Void
+    
+    let itemSize: CGFloat = 110
 
     public var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), spacing: 10)], spacing: 10) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: itemSize), spacing: 10)], spacing: 10) {
             ForEach(Array(assets.enumerated()), id: \.1.id) { index, photo in
                 ZStack(alignment: .topTrailing) {
                     PhotoView(photo: photo, isSinglePhotoMode: false)
-                        .frame(width: 130, height: 130)
+                        .frame(width: itemSize, height: itemSize)
                         .cornerRadius(12)
 
                     if selectionMode {
@@ -29,9 +31,9 @@ public struct MultiPhotoGrid: View {
                             onSelectToggle(index)
                         }) {
                             Image(systemName: selectedIndices.contains(index) ? "checkmark.circle.fill" : "circle")
-                                .font(.system(size: 25))
+                                .font(.system(size: 20))
                                 .foregroundColor(selectedIndices.contains(index) ? .blue : .gray)
-                                .padding(6)
+                                .padding(4)
                         }
                     }
                 }

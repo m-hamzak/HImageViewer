@@ -16,11 +16,13 @@ public struct PhotoView: View {
     
     public var body: some View {
         VStack {
-            Spacer()
+            if isSinglePhotoMode {
+                Spacer()
+            }
             if let image = photo.image {
                 Image(uiImage: image)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .aspectRatio(contentMode: isSinglePhotoMode ? .fit : .fill)
                     .cornerRadius(12) 
             } else if didFailToLoad {
                 Color.red.opacity(0.2)
@@ -35,7 +37,9 @@ public struct PhotoView: View {
                         ProgressView()
                     )
             }
-            Spacer()
+            if isSinglePhotoMode {
+                Spacer()
+            }
         }
         .onAppear {
             guard photo.image == nil && !didFailToLoad else { return }
