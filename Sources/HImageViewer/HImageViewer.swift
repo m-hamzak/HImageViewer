@@ -28,7 +28,7 @@ public struct HImageViewer: View {
     private weak var delegate: HImageViewerControlDelegate?
     
     private var isSinglePhotoMode: Bool {
-        assets.count == 1
+        assets.count <= 1
     }
     private var isUploading: Bool {
         (uploadState.progress ?? 0) > 0 && (uploadState.progress ?? 0) < 1.0
