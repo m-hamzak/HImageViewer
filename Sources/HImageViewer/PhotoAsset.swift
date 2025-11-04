@@ -8,10 +8,11 @@
 import UIKit
 import Photos
 
-public class PhotoAsset: Identifiable, Equatable {
+public class PhotoAsset: ObservableObject, Identifiable, Equatable {
     public let id = UUID()
     public let phAsset: PHAsset?
-    public var image: UIImage?
+    @Published public var image: UIImage?
+    public var imageURL: URL?
     public var isSelected: Bool = false
 
     // Init with PHAsset (e.g., from PHPickerViewController)
@@ -24,6 +25,12 @@ public class PhotoAsset: Identifiable, Equatable {
     public init(image: UIImage) {
         self.image = image
         self.phAsset = nil
+    }
+    
+    public init(imageURL: URL) {
+        self.imageURL = imageURL
+        self.phAsset = nil
+        self.image = nil
     }
 
     // Load thumbnail image
