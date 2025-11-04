@@ -20,10 +20,11 @@ struct TopBar: View {
                 if config.showEditButton {
                     CircleButton(systemName: "pencil", action: config.onEdit)
                 }
-            } else {
-                Button(config.selectionMode ? "Done" : "Select", action: config.onSelectToggle)
-                    .buttonStyle(.borderless)
             }
+//            else {
+//                Button(config.selectionMode ? "Done" : "Select", action: config.onSelectToggle)
+//                    .buttonStyle(.borderless)
+//            }
         }
         .padding(.horizontal)
         .padding(.top, 12)
