@@ -16,6 +16,9 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
     public var imageURL: URL?
     public var isSelected: Bool = false
 
+    // Track active image requests for cancellation
+    private var currentRequestID: PHImageRequestID?
+
     // Init with PHAsset (e.g., from PHPickerViewController)
     public init(phAsset: PHAsset) {
         self.phAsset = phAsset
@@ -45,16 +48,18 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
             options.isSynchronous = false
             options.isNetworkAccessAllowed = true
 
-            PHImageManager.default().requestImage(
+            let requestID = PHImageManager.default().requestImage(
                 for: phAsset,
                 targetSize: targetSize,
                 contentMode: .aspectFill,
                 options: options
-            ) { result, _ in
+            ) { [weak self] result, _ in
                 DispatchQueue.main.async {
+                    self?.currentRequestID = nil
                     completion(result)
                 }
             }
+            currentRequestID = requestID
         } else {
             completion(nil)
         }
@@ -72,16 +77,18 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
 
             let targetSize = CGSize(width: phAsset.pixelWidth, height: phAsset.pixelHeight)
 
-            PHImageManager.default().requestImage(
+            let requestID = PHImageManager.default().requestImage(
                 for: phAsset,
                 targetSize: targetSize,
                 contentMode: .aspectFit,
                 options: options
-            ) { result, _ in
+            ) { [weak self] result, _ in
                 DispatchQueue.main.async {
+                    self?.currentRequestID = nil
                     completion(result)
                 }
             }
+            currentRequestID = requestID
         } else {
             completion(nil)
         }
@@ -90,6 +97,13 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
     // Equatable support
     nonisolated public static func == (lhs: PhotoAsset, rhs: PhotoAsset) -> Bool {
         return lhs.id == rhs.id
+    }
+
+    // Cancel any pending image requests on deallocation
+    deinit {
+        if let requestID = currentRequestID {
+            PHImageManager.default().cancelImageRequest(requestID)
+        }
     }
 }
 

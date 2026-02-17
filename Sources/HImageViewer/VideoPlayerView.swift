@@ -25,6 +25,7 @@ public struct VideoPlayerView: View {
                 }
                 .onDisappear {
                     playerHolder.player.pause()
+                    playerHolder.player.replaceCurrentItem(with: nil)
                 }
                 .frame(height: 300)
                 .cornerRadius(12)
@@ -37,4 +38,8 @@ public struct VideoPlayerView: View {
 
 final class PlayerHolder: ObservableObject {
     @Published var player = AVPlayer()
+
+    deinit {
+        player.replaceCurrentItem(with: nil)
+    }
 }
