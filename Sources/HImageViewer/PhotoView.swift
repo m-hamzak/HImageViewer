@@ -9,8 +9,9 @@ import SwiftUI
 import Photos
 
 public struct PhotoView: View {
-    
+
     @State private var didFailToLoad: Bool = false
+    @State private var imageLoadTask: Task<Void, Never>?
     @ObservedObject var photo: PhotoAsset
     let isSinglePhotoMode: Bool
     
@@ -43,23 +44,33 @@ public struct PhotoView: View {
         }
         .onAppear {
             guard photo.image == nil && !didFailToLoad else { return }
-            
+
             if let url = photo.imageURL {
-                // Load image from remote URL
-                DispatchQueue.global().async {
-                    if let data = try? Data(contentsOf: url), let loadedImage = UIImage(data: data) {
-                        DispatchQueue.main.async {
-                            self.photo.image = loadedImage
+                // Load image from remote URL using async/await
+                imageLoadTask = Task {
+                    do {
+                        let (data, _) = try await URLSession.shared.data(from: url)
+                        guard !Task.isCancelled else { return }
+
+                        if let loadedImage = UIImage(data: data) {
+                            await MainActor.run {
+                                self.photo.image = loadedImage
+                            }
+                        } else {
+                            await MainActor.run {
+                                self.didFailToLoad = true
+                            }
                         }
-                    } else {
-                        DispatchQueue.main.async {
+                    } catch {
+                        guard !Task.isCancelled else { return }
+                        await MainActor.run {
                             self.didFailToLoad = true
                         }
                     }
                 }
                 return
             }
-            
+
             let completion: (UIImage?) -> Void = { img in
                 if let img = img {
                     self.photo.image = img
@@ -67,12 +78,15 @@ public struct PhotoView: View {
                     self.didFailToLoad = true
                 }
             }
-            
+
             if isSinglePhotoMode {
                 photo.loadFullImage(completion: completion)
             } else {
                 photo.loadThumbnail(targetSize: CGSize(width: 150, height: 150), completion: completion)
             }
+        }
+        .onDisappear {
+            imageLoadTask?.cancel()
         }
     }
 }
