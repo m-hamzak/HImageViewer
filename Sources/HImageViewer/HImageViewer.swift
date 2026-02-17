@@ -17,8 +17,6 @@ public struct HImageViewer: View {
     @State private var selectionMode: Bool = false
     @State private var selectedIndices: Set<Int> = []
     @State private var comment: String
-    @State private var showEditOptions: Bool = false
-    @State private var selectedImages: Set<Int> = []
     @State private var wasImageEdited = false
 
     @Environment(\.dismiss) private var dismiss
@@ -41,25 +39,6 @@ public struct HImageViewer: View {
         }
     }
 
-    public struct Configuration {
-        public let title: String?
-        public let showCommentBox: Bool
-        public let showSaveButton: Bool
-        public let showEditButton: Bool
-        
-        public init(
-            title: String? = nil,
-            showCommentBox: Bool = false,
-            showSaveButton: Bool = false,
-            showEditButton: Bool = false
-        ) {
-            self.title = title
-            self.showCommentBox = showCommentBox
-            self.showSaveButton = showSaveButton
-            self.showEditButton = showEditButton
-        }
-    }
-
     public init(
         assets: Binding<[PhotoAsset]>,
         selectedVideo: Binding<URL?>,
@@ -68,7 +47,7 @@ public struct HImageViewer: View {
         self._assets = assets
         self._selectedVideo = selectedVideo
         self.config = configuration
-        self._comment = State(initialValue: config.showCommentBox ? (config.title ?? "") : "")
+        self._comment = State(initialValue: config.initialComment ?? "")
         self.delegate = configuration.delegate
         if let provided = config.uploadState {
                 uploadState = provided
@@ -152,9 +131,14 @@ public struct HImageViewer: View {
             ))
             
         }
-        .onChange(of: assets.first?.image) { _ in
+        .onChange(of: assets.first?.image as UIImage?) { _ in
            if isSinglePhotoMode {
                 wasImageEdited = true
+            }
+        }
+        .onChange(of: assets.count) { newCount in
+            if newCount == 0 {
+                dismiss()
             }
         }
     }
