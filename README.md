@@ -20,6 +20,23 @@ A SwiftUI + UIKit-compatible image and video viewer component with support for:
 
 ---
 
+## 🆕 What's New in 1.0.1
+
+### Critical Fixes
+- 🐛 Fixed crash risks from force unwraps and unsafe array access
+- 🔒 Thread-safe image loading preventing data races and UI warnings
+- 💾 Memory leak fixes with proper request cancellation and cleanup
+- ⚡ Better performance with async/await image loading
+
+### Improvements
+- ✨ Auto-dismiss when all photos deleted
+- 🧹 Cleaner, more maintainable codebase
+- 📖 Fixed `initialComment` configuration now works correctly
+
+See [CHANGELOG.md](./CHANGELOG.md) for full details.
+
+---
+
 ## ✨ Features
 
 - 📷 **Single & Multiple Photo Modes**
@@ -59,7 +76,7 @@ A SwiftUI + UIKit-compatible image and video viewer component with support for:
 
 Add this to your `Package.swift`:
 ```swift
-.package(url: "https://github.com/m-hamzak/HImageViewer.git", from: "1.0.0")
+.package(url: "https://github.com/m-hamzak/HImageViewer.git", from: "1.0.1")
 ```
 
 or in Xcode:
@@ -117,9 +134,9 @@ ImageViewerLauncher.present(
 
 ## 📋 Configuration
 
-Pass `HImageViewer.Configuration` when initializing:
+Pass `HImageViewerConfiguration` when initializing:
 ```swift
-HImageViewer.Configuration(
+HImageViewerConfiguration(
     initialComment: "Pre-filled comment",
     delegate: self,
     showCommentBox: true,
