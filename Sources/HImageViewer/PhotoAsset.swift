@@ -8,6 +8,7 @@
 import UIKit
 import Photos
 
+@MainActor
 public class PhotoAsset: ObservableObject, Identifiable, Equatable {
     public let id = UUID()
     public let phAsset: PHAsset?
@@ -50,7 +51,9 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
                 contentMode: .aspectFill,
                 options: options
             ) { result, _ in
-                completion(result)
+                DispatchQueue.main.async {
+                    completion(result)
+                }
             }
         } else {
             completion(nil)
@@ -75,7 +78,9 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
                 contentMode: .aspectFit,
                 options: options
             ) { result, _ in
-                completion(result)
+                DispatchQueue.main.async {
+                    completion(result)
+                }
             }
         } else {
             completion(nil)
@@ -83,11 +88,12 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
     }
 
     // Equatable support
-    public static func == (lhs: PhotoAsset, rhs: PhotoAsset) -> Bool {
+    nonisolated public static func == (lhs: PhotoAsset, rhs: PhotoAsset) -> Bool {
         return lhs.id == rhs.id
     }
 }
 
+@MainActor
 extension PhotoAsset {
     public static func from(uiImages: [UIImage]) -> [PhotoAsset] {
         uiImages.map { PhotoAsset(image: $0) }

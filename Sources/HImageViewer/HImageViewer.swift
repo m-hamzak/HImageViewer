@@ -117,7 +117,10 @@ public struct HImageViewer: View {
                 selectionMode: selectionMode,
                 onDismiss: { dismiss(); delegate?.didTapCloseButton() },
                 onSelectToggle: { selectionMode.toggle() },
-                onEdit: { delegate?.didTapEditButton(photo: assets.first!) }
+                onEdit: {
+                    guard let firstAsset = assets.first else { return }
+                    delegate?.didTapEditButton(photo: firstAsset)
+                }
             ))
             
             if isSinglePhotoMode {
@@ -169,7 +172,9 @@ public struct HImageViewer: View {
     // MARK: - Delete Handling
 
     private func handleDelete() {
-        let deletedAssets = selectedIndices.map { assets[$0] }
+        let deletedAssets = selectedIndices
+            .filter { $0 < assets.count }
+            .compactMap { assets[safe: $0] }
         assets.removeAll { asset in
             deletedAssets.contains(where: { $0.id == asset.id })
         }
@@ -181,6 +186,14 @@ public struct HImageViewer: View {
 
     private func handleSave() {
         delegate?.didTapSaveButton(comment: comment, photos: assets)
+    }
+}
+
+// MARK: - Array Extension for Safe Subscripting
+
+extension Array {
+    subscript(safe index: Int) -> Element? {
+        return indices.contains(index) ? self[index] : nil
     }
 }
 
