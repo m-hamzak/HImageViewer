@@ -17,8 +17,6 @@ public struct HImageViewer: View {
     @State private var selectionMode: Bool = false
     @State private var selectedIndices: Set<Int> = []
     @State private var comment: String
-    @State private var showEditOptions: Bool = false
-    @State private var selectedImages: Set<Int> = []
     @State private var wasImageEdited = false
 
     @Environment(\.dismiss) private var dismiss
@@ -41,25 +39,6 @@ public struct HImageViewer: View {
         }
     }
 
-    public struct Configuration {
-        public let title: String?
-        public let showCommentBox: Bool
-        public let showSaveButton: Bool
-        public let showEditButton: Bool
-        
-        public init(
-            title: String? = nil,
-            showCommentBox: Bool = false,
-            showSaveButton: Bool = false,
-            showEditButton: Bool = false
-        ) {
-            self.title = title
-            self.showCommentBox = showCommentBox
-            self.showSaveButton = showSaveButton
-            self.showEditButton = showEditButton
-        }
-    }
-
     public init(
         assets: Binding<[PhotoAsset]>,
         selectedVideo: Binding<URL?>,
@@ -68,7 +47,7 @@ public struct HImageViewer: View {
         self._assets = assets
         self._selectedVideo = selectedVideo
         self.config = configuration
-        self._comment = State(initialValue: config.showCommentBox ? (config.title ?? "") : "")
+        self._comment = State(initialValue: config.initialComment ?? "")
         self.delegate = configuration.delegate
         if let provided = config.uploadState {
                 uploadState = provided
@@ -117,7 +96,10 @@ public struct HImageViewer: View {
                 selectionMode: selectionMode,
                 onDismiss: { dismiss(); delegate?.didTapCloseButton() },
                 onSelectToggle: { selectionMode.toggle() },
-                onEdit: { delegate?.didTapEditButton(photo: assets.first!) }
+                onEdit: {
+                    guard let firstAsset = assets.first else { return }
+                    delegate?.didTapEditButton(photo: firstAsset)
+                }
             ))
             
             if isSinglePhotoMode {
@@ -149,9 +131,14 @@ public struct HImageViewer: View {
             ))
             
         }
-        .onChange(of: assets.first?.image) { _ in
+        .onChange(of: assets.first?.image as UIImage?) { _ in
            if isSinglePhotoMode {
                 wasImageEdited = true
+            }
+        }
+        .onChange(of: assets.count) { newCount in
+            if newCount == 0 {
+                dismiss()
             }
         }
     }
@@ -169,7 +156,9 @@ public struct HImageViewer: View {
     // MARK: - Delete Handling
 
     private func handleDelete() {
-        let deletedAssets = selectedIndices.map { assets[$0] }
+        let deletedAssets = selectedIndices
+            .filter { $0 < assets.count }
+            .compactMap { assets[safe: $0] }
         assets.removeAll { asset in
             deletedAssets.contains(where: { $0.id == asset.id })
         }
@@ -181,6 +170,14 @@ public struct HImageViewer: View {
 
     private func handleSave() {
         delegate?.didTapSaveButton(comment: comment, photos: assets)
+    }
+}
+
+// MARK: - Array Extension for Safe Subscripting
+
+extension Array {
+    subscript(safe index: Int) -> Element? {
+        return indices.contains(index) ? self[index] : nil
     }
 }
 

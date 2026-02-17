@@ -8,12 +8,16 @@
 import UIKit
 import Photos
 
+@MainActor
 public class PhotoAsset: ObservableObject, Identifiable, Equatable {
     public let id = UUID()
     public let phAsset: PHAsset?
     @Published public var image: UIImage?
     public var imageURL: URL?
     public var isSelected: Bool = false
+
+    // Track active image requests for cancellation
+    private var currentRequestID: PHImageRequestID?
 
     // Init with PHAsset (e.g., from PHPickerViewController)
     public init(phAsset: PHAsset) {
@@ -44,14 +48,18 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
             options.isSynchronous = false
             options.isNetworkAccessAllowed = true
 
-            PHImageManager.default().requestImage(
+            let requestID = PHImageManager.default().requestImage(
                 for: phAsset,
                 targetSize: targetSize,
                 contentMode: .aspectFill,
                 options: options
-            ) { result, _ in
-                completion(result)
+            ) { [weak self] result, _ in
+                DispatchQueue.main.async {
+                    self?.currentRequestID = nil
+                    completion(result)
+                }
             }
+            currentRequestID = requestID
         } else {
             completion(nil)
         }
@@ -69,25 +77,37 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
 
             let targetSize = CGSize(width: phAsset.pixelWidth, height: phAsset.pixelHeight)
 
-            PHImageManager.default().requestImage(
+            let requestID = PHImageManager.default().requestImage(
                 for: phAsset,
                 targetSize: targetSize,
                 contentMode: .aspectFit,
                 options: options
-            ) { result, _ in
-                completion(result)
+            ) { [weak self] result, _ in
+                DispatchQueue.main.async {
+                    self?.currentRequestID = nil
+                    completion(result)
+                }
             }
+            currentRequestID = requestID
         } else {
             completion(nil)
         }
     }
 
     // Equatable support
-    public static func == (lhs: PhotoAsset, rhs: PhotoAsset) -> Bool {
+    nonisolated public static func == (lhs: PhotoAsset, rhs: PhotoAsset) -> Bool {
         return lhs.id == rhs.id
+    }
+
+    // Cancel any pending image requests on deallocation
+    deinit {
+        if let requestID = currentRequestID {
+            PHImageManager.default().cancelImageRequest(requestID)
+        }
     }
 }
 
+@MainActor
 extension PhotoAsset {
     public static func from(uiImages: [UIImage]) -> [PhotoAsset] {
         uiImages.map { PhotoAsset(image: $0) }
