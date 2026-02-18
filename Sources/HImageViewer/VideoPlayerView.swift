@@ -10,8 +10,13 @@ import SwiftUI
 import AVKit
 
 public struct VideoPlayerView: View {
+
+    // MARK: - Properties
+
     let videoURL: URL
     @StateObject private var playerHolder = PlayerHolder()
+
+    // MARK: - Body
 
     public var body: some View {
         VStack {
@@ -35,6 +40,8 @@ public struct VideoPlayerView: View {
 
     }
 }
+
+// MARK: - Player Holder
 
 final class PlayerHolder: ObservableObject {
     @Published var player = AVPlayer()

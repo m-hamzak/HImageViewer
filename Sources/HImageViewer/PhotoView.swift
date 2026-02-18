@@ -10,11 +10,15 @@ import Photos
 
 public struct PhotoView: View {
 
+    // MARK: - Properties
+
     @State private var didFailToLoad: Bool = false
     @State private var imageLoadTask: Task<Void, Never>?
     @ObservedObject var photo: PhotoAsset
     let isSinglePhotoMode: Bool
-    
+
+    // MARK: - Body
+
     public var body: some View {
         VStack {
             if isSinglePhotoMode {

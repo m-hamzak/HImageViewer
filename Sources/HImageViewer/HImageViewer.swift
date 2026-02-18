@@ -1,5 +1,5 @@
 //
-//  ImageViewer.swift
+//  HImageViewer.swift
 //  HImageViewer
 //
 //  Created by Hamza Khalid on 21/04/2025.
@@ -9,7 +9,49 @@ import SwiftUI
 import Photos
 import AVFoundation
 
+/// A SwiftUI view for displaying and managing photos and videos with editing capabilities.
+///
+/// `HImageViewer` provides a full-screen viewer for displaying single or multiple photos/videos with support for:
+/// - Single photo viewing with optional editing
+/// - Multi-photo grid with selection and deletion
+/// - Video playback
+/// - Optional comment/title display
+/// - Upload progress tracking
+///
+/// ## Usage
+///
+/// ### Basic single photo viewer:
+/// ```swift
+/// @State var assets = [PhotoAsset(image: myImage)]
+/// @State var selectedVideo: URL? = nil
+///
+/// HImageViewer(
+///     assets: $assets,
+///     selectedVideo: $selectedVideo
+/// )
+/// ```
+///
+/// ### Multi-photo viewer with configuration:
+/// ```swift
+/// @State var assets = PhotoAsset.from(uiImages: myImages)
+/// @State var selectedVideo: URL? = nil
+///
+/// HImageViewer(
+///     assets: $assets,
+///     selectedVideo: $selectedVideo,
+///     configuration: .init(
+///         showSaveButton: true,
+///         showEditButton: true,
+///         delegate: self
+///     )
+/// )
+/// ```
+///
+/// - Important: The viewer automatically dismisses when all assets are deleted in multi-photo mode.
+/// - Note: For upload progress tracking, pass a shared `HImageViewerUploadState` via configuration.
 public struct HImageViewer: View {
+
+    // MARK: - Properties
 
     @Binding private var assets: [PhotoAsset]
     @Binding private var selectedVideo: URL?
@@ -24,14 +66,16 @@ public struct HImageViewer: View {
     
     private let config: HImageViewerConfiguration
     private weak var delegate: HImageViewerControlDelegate?
-    
+
+    // MARK: - Computed Properties
+
     private var isSinglePhotoMode: Bool {
         assets.count <= 1
     }
     private var isUploading: Bool {
         (uploadState.progress ?? 0) > 0 && (uploadState.progress ?? 0) < 1.0
     }
-    var shouldShowSaveButton: Bool {
+    private var shouldShowSaveButton: Bool {
         if isSinglePhotoMode {
             return wasImageEdited || config.showSaveButton
         } else {
@@ -39,6 +83,16 @@ public struct HImageViewer: View {
         }
     }
 
+    // MARK: - Initialization
+
+    /// Creates a new image viewer instance.
+    ///
+    /// - Parameters:
+    ///   - assets: A binding to an array of `PhotoAsset` objects to display. The array is modified when photos are deleted.
+    ///   - selectedVideo: A binding to an optional video URL. If provided, displays video player instead of photo.
+    ///   - configuration: Configuration object specifying viewer behavior. Defaults to standard configuration.
+    ///
+    /// - Note: Pass an empty array for `assets` if only displaying video via `selectedVideo`.
     public init(
         assets: Binding<[PhotoAsset]>,
         selectedVideo: Binding<URL?>,
@@ -55,6 +109,8 @@ public struct HImageViewer: View {
                 uploadState = HImageViewerUploadState()
             }
     }
+
+    // MARK: - Body
 
     public var body: some View {
         ZStack {
@@ -86,7 +142,9 @@ public struct HImageViewer: View {
             }
         }
     }
-    
+
+    // MARK: - Subviews
+
     private var mainComponent: some View {
         VStack {
 
@@ -173,7 +231,7 @@ public struct HImageViewer: View {
     }
 }
 
-// MARK: - Array Extension for Safe Subscripting
+// MARK: - Array Extension
 
 extension Array {
     subscript(safe index: Int) -> Element? {
@@ -181,8 +239,8 @@ extension Array {
     }
 }
 
+// MARK: - Previews
 
- 
 #Preview {
     @State  var photoAssets: [PhotoAsset] = [PhotoAsset(image: UIImage(systemName: "person")!)]
     @State  var selectedVideo: URL? = nil

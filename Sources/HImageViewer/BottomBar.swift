@@ -18,7 +18,7 @@ struct BottomBar: View {
                 if config.isSinglePhotoMode {
                     textSection
                 }
-                    Spacer()
+                Spacer()
 
                 if config.showSaveButton {
                     Button(action: {
