@@ -2,6 +2,29 @@
 
 All notable changes to HImageViewer will be documented in this file.
 
+## [1.0.2] - 2026-02-18
+
+###  Code Quality & Documentation
+- Added comprehensive DocC documentation throughout the codebase
+- Renamed `Protocol.swift` to `HImageViewerDelegate.swift` for better clarity
+- Added MARK comments to all files for improved code organization
+- Added default protocol implementations for flexible delegate adoption
+- Made internal properties `private` for better encapsulation
+- Removed all commented code for cleaner codebase
+
+###  Developer Experience
+- Added detailed usage examples in DocC comments
+- Created `HImageViewerLauncher` documentation for UIKit integration
+- Documented upload progress architecture and usage patterns
+- Added important notes about delegate retain cycles
+- Improved code discoverability with better file naming
+
+###  API Improvements
+- Protocol methods now have default empty implementations
+- More flexible delegate adoption pattern
+- Better separation of concerns in configuration
+- Clearer API surface with improved naming
+
 ## [1.0.1] - 2025-02-17
 
 ###  Bug Fixes
