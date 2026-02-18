@@ -10,13 +10,17 @@ import SwiftUI
 import Photos
 
 public struct MultiPhotoGrid: View {
+
+    // MARK: - Properties
+
     let assets: [PhotoAsset]
     let selectedIndices: Set<Int>
     let selectionMode: Bool
     let onSelectToggle: (Int) -> Void
-//    let onAddMore: () -> Void
-    
+
     let itemSize: CGFloat = 110
+
+    // MARK: - Body
 
     public var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: itemSize), spacing: 10)], spacing: 10) {
@@ -38,19 +42,6 @@ public struct MultiPhotoGrid: View {
                     }
                 }
             }
-
-//            // Add More
-//            Button(action: onAddMore) {
-//                VStack {
-//                    Image(systemName: "plus.circle")
-//                        .font(.largeTitle)
-//                    Text("Add More")
-//                        .font(.subheadline)
-//                }
-//                .frame(width: 100, height: 100)
-//                .background(Color.gray.opacity(0.1))
-//                .cornerRadius(10)
-//            }
         }
         .padding(.horizontal)
         .padding(.top)
