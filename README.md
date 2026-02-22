@@ -76,7 +76,7 @@ See [CHANGELOG.md](./CHANGELOG.md) for full details.
 
 Add this to your `Package.swift`:
 ```swift
-.package(url: "https://github.com/m-hamzak/HImageViewer.git", from: "1.0.1")
+.package(url: "https://github.com/m-hamzak/HImageViewer.git", from: "1.0.2")
 ```
 
 or in Xcode:
