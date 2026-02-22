@@ -23,6 +23,10 @@ let package = Package(
             dependencies: [],
             path: "Sources/HImageViewer",
         ),
-
+        .testTarget(
+            name: "HImageViewerTests",
+            dependencies: ["HImageViewer"],
+            path: "Tests/HImageViewerTests"
+        ),
     ]
 )
