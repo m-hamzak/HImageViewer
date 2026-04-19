@@ -45,11 +45,12 @@ final class TopBarCancelSelectionTests: XCTestCase {
         var cancelCalled = false
 
         let config = TopBarConfig(
-            isSinglePhotoMode: true,
             showEditButton: true,
+            showSelectButton: false,
             selectionMode: true,
             onDismiss: {},
             onCancelSelection: { cancelCalled = true },
+            onSelectToggle: {},
             onEdit: {}
         )
 
@@ -62,17 +63,36 @@ final class TopBarCancelSelectionTests: XCTestCase {
         var dismissCalled = false
 
         let config = TopBarConfig(
-            isSinglePhotoMode: false,
             showEditButton: false,
+            showSelectButton: false,
             selectionMode: false,
             onDismiss: { dismissCalled = true },
             onCancelSelection: {},
+            onSelectToggle: {},
             onEdit: {}
         )
 
         config.onDismiss()
 
         XCTAssertTrue(dismissCalled, "onDismiss closure must be invoked when called")
+    }
+
+    func test_topBarConfig_onSelectToggle_closure_isCalled() {
+        var selectToggleCalled = false
+
+        let config = TopBarConfig(
+            showEditButton: false,
+            showSelectButton: true,
+            selectionMode: false,
+            onDismiss: {},
+            onCancelSelection: {},
+            onSelectToggle: { selectToggleCalled = true },
+            onEdit: {}
+        )
+
+        config.onSelectToggle()
+
+        XCTAssertTrue(selectToggleCalled, "onSelectToggle closure must be invoked when called")
     }
 
     // MARK: - HImageViewerLauncher rename

@@ -10,18 +10,19 @@ import Photos
 
 /// A SwiftUI view for displaying and managing photos and videos with editing capabilities.
 ///
-/// `HImageViewer` provides a full-screen viewer for displaying single or multiple photos/videos with support for:
-/// - Single photo viewing with optional editing
-/// - Multi-photo grid with selection and deletion
+/// `HImageViewer` provides a full-screen paged viewer for displaying photos/videos with support for:
+/// - Swipe paging through all photos
+/// - Pinch-to-zoom and double-tap zoom on each photo
+/// - Multi-photo selection and deletion via grid overlay
 /// - Video playback
 /// - Optional comment/title display
 /// - Upload progress tracking
 ///
 /// ## Usage
 ///
-/// ### Basic single photo viewer:
+/// ### Basic viewer:
 /// ```swift
-/// @State var assets = [PhotoAsset(image: myImage)]
+/// @State var assets = PhotoAsset.from(uiImages: myImages)
 /// @State var selectedVideo: URL? = nil
 ///
 /// HImageViewer(
@@ -30,23 +31,16 @@ import Photos
 /// )
 /// ```
 ///
-/// ### Multi-photo viewer with configuration:
+/// ### Open at a specific index:
 /// ```swift
-/// @State var assets = PhotoAsset.from(uiImages: myImages)
-/// @State var selectedVideo: URL? = nil
-///
 /// HImageViewer(
 ///     assets: $assets,
 ///     selectedVideo: $selectedVideo,
-///     configuration: .init(
-///         showSaveButton: true,
-///         showEditButton: true,
-///         delegate: self
-///     )
+///     initialIndex: 2
 /// )
 /// ```
 ///
-/// - Important: The viewer automatically dismisses when all assets are deleted in multi-photo mode.
+/// - Important: The viewer automatically dismisses when all assets are deleted.
 /// - Note: For upload progress tracking, pass a shared `HImageViewerUploadState` via configuration.
 public struct HImageViewer: View {
 
@@ -55,6 +49,7 @@ public struct HImageViewer: View {
     @Binding private var assets: [PhotoAsset]
     @Binding private var selectedVideo: URL?
 
+    @State private var currentIndex: Int
     @State private var selectionMode: Bool = false
     @State private var selectedIndices: Set<Int> = []
     @State private var comment: String
@@ -62,24 +57,22 @@ public struct HImageViewer: View {
 
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var uploadState: HImageViewerUploadState
-    
+
     private let config: HImageViewerConfiguration
     private weak var delegate: HImageViewerControlDelegate?
 
     // MARK: - Computed Properties
 
-    private var isSinglePhotoMode: Bool {
-        assets.count <= 1
-    }
     private var isUploading: Bool {
         (uploadState.progress ?? 0) > 0 && (uploadState.progress ?? 0) < 1.0
     }
+
     private var shouldShowSaveButton: Bool {
-        if isSinglePhotoMode {
-            return wasImageEdited || config.showSaveButton
-        } else {
-            return config.showSaveButton
-        }
+        wasImageEdited || config.showSaveButton
+    }
+
+    private var currentAsset: PhotoAsset? {
+        assets[safe: currentIndex]
     }
 
     // MARK: - Initialization
@@ -87,26 +80,31 @@ public struct HImageViewer: View {
     /// Creates a new image viewer instance.
     ///
     /// - Parameters:
-    ///   - assets: A binding to an array of `PhotoAsset` objects to display. The array is modified when photos are deleted.
-    ///   - selectedVideo: A binding to an optional video URL. If provided, displays video player instead of photo.
-    ///   - configuration: Configuration object specifying viewer behavior. Defaults to standard configuration.
-    ///
-    /// - Note: Pass an empty array for `assets` if only displaying video via `selectedVideo`.
+    ///   - assets: A binding to the array of `PhotoAsset` objects to display. Modified when photos are deleted.
+    ///   - selectedVideo: A binding to an optional video URL. If non-nil, displays video player instead of photos.
+    ///   - initialIndex: The index of the photo to display first. Clamped to valid range. Defaults to `0`.
+    ///   - configuration: Configuration object specifying viewer behaviour. Defaults to standard configuration.
     public init(
         assets: Binding<[PhotoAsset]>,
         selectedVideo: Binding<URL?>,
+        initialIndex: Int = 0,
         configuration: HImageViewerConfiguration = .init()
     ) {
         self._assets = assets
         self._selectedVideo = selectedVideo
         self.config = configuration
-        self._comment = State(initialValue: config.initialComment ?? "")
+        self._comment = State(initialValue: configuration.initialComment ?? "")
         self.delegate = configuration.delegate
-        if let provided = config.uploadState {
-                uploadState = provided
-            } else {
-                uploadState = HImageViewerUploadState()
-            }
+
+        let count = assets.wrappedValue.count
+        let clamped = count == 0 ? 0 : max(0, min(initialIndex, count - 1))
+        self._currentIndex = State(initialValue: clamped)
+
+        if let provided = configuration.uploadState {
+            uploadState = provided
+        } else {
+            uploadState = HImageViewerUploadState()
+        }
     }
 
     // MARK: - Body
@@ -114,27 +112,26 @@ public struct HImageViewer: View {
     public var body: some View {
         ZStack {
             mainComponent
-            .onAppear {
-                        if uploadState.progress == 1.0 {
-                            uploadState.progress = nil
-                        }
+                .onAppear {
+                    if uploadState.progress == 1.0 {
+                        uploadState.progress = nil
                     }
-            .disabled(uploadState.progress ?? 0 > 0)
-            
-                if let progress = uploadState.progress {
+                }
+                .disabled(uploadState.progress ?? 0 > 0)
+
+            if let progress = uploadState.progress {
                 VStack {
                     Spacer()
-                        ProgressRingOverlayView(progress: progress, title: "Uploading")
-                            .padding()
-                            .opacity(progress < 1.0 ? 1 : 0)
-                                    .animation(.easeOut(duration: 0.3), value: progress)
-                                    .onChangeCompat(of: progress) { newProgress in
-                                                guard newProgress >= 1 else { return }
-                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                                    dismiss()
-                                                }
-                                            }
-                    
+                    ProgressRingOverlayView(progress: progress, title: "Uploading")
+                        .padding()
+                        .opacity(progress < 1.0 ? 1 : 0)
+                        .animation(.easeOut(duration: 0.3), value: progress)
+                        .onChangeCompat(of: progress) { newProgress in
+                            guard newProgress >= 1 else { return }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                dismiss()
+                            }
+                        }
                     Spacer()
                 }
                 .transition(.opacity)
@@ -145,43 +142,40 @@ public struct HImageViewer: View {
     // MARK: - Subviews
 
     private var mainComponent: some View {
-        VStack {
-
+        VStack(spacing: 0) {
             TopBar(config: TopBarConfig(
-                isSinglePhotoMode: isSinglePhotoMode,
                 showEditButton: config.showEditButton,
+                showSelectButton: assets.count > 1,
                 selectionMode: selectionMode,
                 onDismiss: { dismiss(); delegate?.didTapCloseButton() },
                 onCancelSelection: {
                     selectionMode = false
                     selectedIndices.removeAll()
                 },
+                onSelectToggle: { selectionMode = true },
                 onEdit: {
-                    guard let firstAsset = assets.first else { return }
-                    delegate?.didTapEditButton(photo: firstAsset)
+                    guard let currentAsset else { return }
+                    delegate?.didTapEditButton(photo: currentAsset)
                 }
             ))
-            
-            if isSinglePhotoMode {
-                if let videoURL = selectedVideo {
-                    VideoPlayerView(videoURL: videoURL)
-                        .padding()
-                } else if let firstAsset = assets.first {
-                    PhotoView(photo: firstAsset, isSinglePhotoMode: true)
-                        .padding()
+
+            ZStack {
+                contentView
+                if selectionMode {
+                    MultiPhotoGrid(
+                        assets: assets,
+                        selectedIndices: selectedIndices,
+                        selectionMode: selectionMode,
+                        onSelectToggle: handleSelection
+                    )
+                    .background(Color(UIColor.systemBackground))
+                    .transition(.opacity)
                 }
-            } else {
-                MultiPhotoGrid (
-                    assets: assets,
-                    selectedIndices: selectedIndices,
-                    selectionMode: selectionMode,
-                    onSelectToggle: handleSelection
-                )
-                Spacer()
             }
-            
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .animation(.easeInOut(duration: 0.2), value: selectionMode)
+
             BottomBar(comment: $comment, config: BottomBarConfig(
-                isSinglePhotoMode: isSinglePhotoMode,
                 selectionMode: selectionMode,
                 showSaveButton: shouldShowSaveButton,
                 showCommentBox: config.showCommentBox,
@@ -189,20 +183,36 @@ public struct HImageViewer: View {
                 onSave: { handleSave() },
                 onDelete: { handleDelete() }
             ))
-            
         }
-        .onChangeCompat(of: assets.first?.image) { _ in
-            if isSinglePhotoMode {
-                wasImageEdited = true
-            }
+        .onChangeCompat(of: assets[safe: currentIndex]?.image) { _ in
+            wasImageEdited = true
         }
         .onChangeCompat(of: assets.count) { newCount in
             if newCount == 0 {
                 dismiss()
+            } else {
+                currentIndex = min(currentIndex, newCount - 1)
             }
         }
     }
-    
+
+    @ViewBuilder
+    private var contentView: some View {
+        if let videoURL = selectedVideo {
+            VideoPlayerView(videoURL: videoURL)
+                .padding()
+        } else if !assets.isEmpty {
+            TabView(selection: $currentIndex) {
+                ForEach(Array(assets.enumerated()), id: \.1.id) { index, asset in
+                    PhotoView(photo: asset, isSinglePhotoMode: true)
+                        .padding(.horizontal)
+                        .tag(index)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+        }
+    }
+
     // MARK: - Selection Handling
 
     private func handleSelection(_ index: Int) {
@@ -224,6 +234,9 @@ public struct HImageViewer: View {
         }
         selectedIndices.removeAll()
         selectionMode = false
+        if !assets.isEmpty {
+            currentIndex = min(currentIndex, assets.count - 1)
+        }
     }
 
     // MARK: - Save Handling
@@ -261,4 +274,3 @@ private struct MultiPhotoPreview: View {
 
 #Preview("Single") { SinglePhotoPreview() }
 #Preview("Multi")  { MultiPhotoPreview() }
-

@@ -15,11 +15,8 @@ struct BottomBar: View {
         VStack {
             Divider()
             HStack {
-                if config.isSinglePhotoMode {
-                    textSection
-                }
+                textSection
                 Spacer()
-
                 if config.showSaveButton {
                     Button(action: {
                         if config.selectionMode {
@@ -59,7 +56,6 @@ struct BottomBar: View {
 // MARK: - Supporting types
 
 struct BottomBarConfig {
-    var isSinglePhotoMode: Bool
     var selectionMode: Bool
     var showSaveButton: Bool
     var showCommentBox: Bool
