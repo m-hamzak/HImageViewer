@@ -30,7 +30,7 @@ import UIKit
 ///     }
 /// }
 /// ```
-public final class ImageViewerLauncher {
+public final class HImageViewerLauncher {
     /// Presents the image viewer modally from a UIKit view controller.
     ///
     /// - Parameters:

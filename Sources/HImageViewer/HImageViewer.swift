@@ -7,7 +7,6 @@
 
 import SwiftUI
 import Photos
-import AVFoundation
 
 /// A SwiftUI view for displaying and managing photos and videos with editing capabilities.
 ///
@@ -129,11 +128,11 @@ public struct HImageViewer: View {
                             .padding()
                             .opacity(progress < 1.0 ? 1 : 0)
                                     .animation(.easeOut(duration: 0.3), value: progress)
-                                    .onChange(of: progress) { newProgress in
+                                    .onChangeCompat(of: progress) { newProgress in
                                                 guard newProgress >= 1 else { return }
-                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                                        dismiss()
-                                                    }
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                                    dismiss()
+                                                }
                                             }
                     
                     Spacer()
@@ -148,12 +147,15 @@ public struct HImageViewer: View {
     private var mainComponent: some View {
         VStack {
 
-            TopBar(config: TopBarConfig (
+            TopBar(config: TopBarConfig(
                 isSinglePhotoMode: isSinglePhotoMode,
                 showEditButton: config.showEditButton,
                 selectionMode: selectionMode,
                 onDismiss: { dismiss(); delegate?.didTapCloseButton() },
-                onSelectToggle: { selectionMode.toggle() },
+                onCancelSelection: {
+                    selectionMode = false
+                    selectedIndices.removeAll()
+                },
                 onEdit: {
                     guard let firstAsset = assets.first else { return }
                     delegate?.didTapEditButton(photo: firstAsset)
@@ -189,12 +191,12 @@ public struct HImageViewer: View {
             ))
             
         }
-        .onChange(of: assets.first?.image as UIImage?) { _ in
-           if isSinglePhotoMode {
+        .onChangeCompat(of: assets.first?.image) { _ in
+            if isSinglePhotoMode {
                 wasImageEdited = true
             }
         }
-        .onChange(of: assets.count) { newCount in
+        .onChangeCompat(of: assets.count) { newCount in
             if newCount == 0 {
                 dismiss()
             }
@@ -241,23 +243,22 @@ extension Array {
 
 // MARK: - Previews
 
-#Preview {
-    @State  var photoAssets: [PhotoAsset] = [PhotoAsset(image: UIImage(systemName: "person")!)]
-    @State  var selectedVideo: URL? = nil
-    
-    HImageViewer(
-        assets: $photoAssets,
-        selectedVideo: $selectedVideo
-    )
+private struct SinglePhotoPreview: View {
+    @State private var assets: [PhotoAsset] = [PhotoAsset(image: UIImage(systemName: "person")!)]
+    @State private var selectedVideo: URL? = nil
+    var body: some View {
+        HImageViewer(assets: $assets, selectedVideo: $selectedVideo)
+    }
 }
 
-#Preview {
-    @State  var photoAssets: [PhotoAsset] = [PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!), PhotoAsset(image: UIImage(systemName: "person")!)]
-    @State  var selectedVideo: URL? = nil
-
-    HImageViewer(
-        assets: $photoAssets,
-        selectedVideo: $selectedVideo
-    )
+private struct MultiPhotoPreview: View {
+    @State private var assets: [PhotoAsset] = (0..<5).map { _ in PhotoAsset(image: UIImage(systemName: "person")!) }
+    @State private var selectedVideo: URL? = nil
+    var body: some View {
+        HImageViewer(assets: $assets, selectedVideo: $selectedVideo)
+    }
 }
+
+#Preview("Single") { SinglePhotoPreview() }
+#Preview("Multi")  { MultiPhotoPreview() }
 
