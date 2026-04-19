@@ -20,9 +20,14 @@ struct TopBar: View {
                 CircleButton(systemName: "xmark", action: config.onDismiss)
             }
             Spacer()
-            if config.isSinglePhotoMode && !config.selectionMode {
-                if config.showEditButton {
-                    CircleButton(systemName: "pencil", action: config.onEdit)
+            if !config.selectionMode {
+                HStack(spacing: 12) {
+                    if config.showEditButton {
+                        CircleButton(systemName: "pencil", action: config.onEdit)
+                    }
+                    if config.showSelectButton {
+                        CircleButton(systemName: "checkmark.circle", action: config.onSelectToggle)
+                    }
                 }
             }
         }
@@ -34,11 +39,12 @@ struct TopBar: View {
 // MARK: - Supporting types
 
 struct TopBarConfig {
-    var isSinglePhotoMode: Bool
     var showEditButton: Bool
+    var showSelectButton: Bool
     var selectionMode: Bool
     var onDismiss: () -> Void
     var onCancelSelection: () -> Void
+    var onSelectToggle: () -> Void
     var onEdit: () -> Void
 }
 

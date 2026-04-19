@@ -11,26 +11,6 @@ import XCTest
 @MainActor
 final class HImageViewerLogicTests: XCTestCase {
 
-    // MARK: - isSinglePhotoMode Logic
-
-    func test_singlePhotoMode_zeroAssets() {
-        let count = 0
-        let isSinglePhotoMode = count <= 1
-        XCTAssertTrue(isSinglePhotoMode, "0 assets → single photo mode")
-    }
-
-    func test_singlePhotoMode_oneAsset() {
-        let count = 1
-        let isSinglePhotoMode = count <= 1
-        XCTAssertTrue(isSinglePhotoMode, "1 asset → single photo mode")
-    }
-
-    func test_singlePhotoMode_twoAssets() {
-        let count = 2
-        let isSinglePhotoMode = count <= 1
-        XCTAssertFalse(isSinglePhotoMode, "2+ assets → multi-photo mode (grid)")
-    }
-
     // MARK: - isUploading Logic
 
     func test_isUploading_progressNil() {
@@ -57,50 +37,90 @@ final class HImageViewerLogicTests: XCTestCase {
         XCTAssertFalse(isUploading, "1.0 progress = upload complete, not 'uploading'")
     }
 
-    // MARK: - shouldShowSaveButton Logic
+    // MARK: - shouldShowSaveButton Logic (simplified — no longer depends on isSinglePhotoMode)
 
-    func test_shouldShowSave_singleMode_editedTrue_configFalse() {
-        let isSinglePhotoMode = true
+    func test_shouldShowSave_editedTrue_configFalse() {
         let wasImageEdited = true
         let showSaveButton = false
-
-        let result: Bool
-        if isSinglePhotoMode {
-            result = wasImageEdited || showSaveButton
-        } else {
-            result = showSaveButton
-        }
-
+        let result = wasImageEdited || showSaveButton
         XCTAssertTrue(result, "Edited image should show save button regardless of config")
     }
 
-    func test_shouldShowSave_singleMode_editedFalse_configFalse() {
-        let isSinglePhotoMode = true
+    func test_shouldShowSave_editedFalse_configTrue() {
+        let wasImageEdited = false
+        let showSaveButton = true
+        let result = wasImageEdited || showSaveButton
+        XCTAssertTrue(result, "config.showSaveButton=true should show save button")
+    }
+
+    func test_shouldShowSave_bothFalse() {
         let wasImageEdited = false
         let showSaveButton = false
-
-        let result: Bool
-        if isSinglePhotoMode {
-            result = wasImageEdited || showSaveButton
-        } else {
-            result = showSaveButton
-        }
-
+        let result = wasImageEdited || showSaveButton
         XCTAssertFalse(result, "Not edited + config false = hide save button")
     }
 
-    func test_shouldShowSave_multiMode_configTrue() {
-        let isSinglePhotoMode = false
-        let showSaveButton = true
+    // MARK: - currentIndex Clamping Logic
 
-        let result: Bool
-        if isSinglePhotoMode {
-            result = false || showSaveButton
-        } else {
-            result = showSaveButton
+    func test_initialIndex_clampedToZero_forEmptyAssets() {
+        let count = 0
+        let clamped = count == 0 ? 0 : max(0, min(5, count - 1))
+        XCTAssertEqual(clamped, 0, "Empty assets must clamp index to 0")
+    }
+
+    func test_initialIndex_clampedToLastIndex_whenTooLarge() {
+        let count = 3
+        let initialIndex = 10
+        let clamped = count == 0 ? 0 : max(0, min(initialIndex, count - 1))
+        XCTAssertEqual(clamped, 2, "initialIndex=10 with 3 assets must clamp to 2")
+    }
+
+    func test_initialIndex_clampedToZero_whenNegative() {
+        let count = 3
+        let initialIndex = -1
+        let clamped = count == 0 ? 0 : max(0, min(initialIndex, count - 1))
+        XCTAssertEqual(clamped, 0, "Negative initialIndex must clamp to 0")
+    }
+
+    func test_initialIndex_validIndex_unchanged() {
+        let count = 5
+        let initialIndex = 3
+        let clamped = count == 0 ? 0 : max(0, min(initialIndex, count - 1))
+        XCTAssertEqual(clamped, 3, "Valid initialIndex must remain unchanged")
+    }
+
+    func test_currentIndex_clampedAfterDeletion() {
+        var assets = [
+            PhotoAsset(image: UIImage(systemName: "star")!),
+            PhotoAsset(image: UIImage(systemName: "heart")!),
+            PhotoAsset(image: UIImage(systemName: "circle")!)
+        ]
+        var currentIndex = 2
+
+        // Simulate deleting the last asset (index 2)
+        assets.removeLast()
+        if !assets.isEmpty {
+            currentIndex = min(currentIndex, assets.count - 1)
         }
 
-        XCTAssertTrue(result, "Multi mode respects config.showSaveButton directly")
+        XCTAssertEqual(currentIndex, 1, "currentIndex must clamp to last valid index after deletion")
+    }
+
+    func test_currentIndex_staysValid_whenDeletingNonCurrentAsset() {
+        var assets = [
+            PhotoAsset(image: UIImage(systemName: "star")!),
+            PhotoAsset(image: UIImage(systemName: "heart")!),
+            PhotoAsset(image: UIImage(systemName: "circle")!)
+        ]
+        var currentIndex = 1
+
+        // Delete asset at index 2 (not the current one)
+        assets.remove(at: 2)
+        if !assets.isEmpty {
+            currentIndex = min(currentIndex, assets.count - 1)
+        }
+
+        XCTAssertEqual(currentIndex, 1, "currentIndex should remain 1 when a later asset is deleted")
     }
 
     // MARK: - handleSelection Logic
@@ -109,7 +129,6 @@ final class HImageViewerLogicTests: XCTestCase {
         var selectedIndices: Set<Int> = []
         let index = 2
 
-        // First tap: select
         if selectedIndices.contains(index) {
             selectedIndices.remove(index)
         } else {
@@ -117,7 +136,6 @@ final class HImageViewerLogicTests: XCTestCase {
         }
         XCTAssertTrue(selectedIndices.contains(2), "First tap should SELECT the photo")
 
-        // Second tap: deselect
         if selectedIndices.contains(index) {
             selectedIndices.remove(index)
         } else {
@@ -130,14 +148,13 @@ final class HImageViewerLogicTests: XCTestCase {
 
     func test_deleteSelectedAssets() {
         var assets = [
-            PhotoAsset(image: UIImage(systemName: "star")!),      // index 0: "A"
-            PhotoAsset(image: UIImage(systemName: "heart")!),     // index 1: "B"
-            PhotoAsset(image: UIImage(systemName: "circle")!)     // index 2: "C"
+            PhotoAsset(image: UIImage(systemName: "star")!),
+            PhotoAsset(image: UIImage(systemName: "heart")!),
+            PhotoAsset(image: UIImage(systemName: "circle")!)
         ]
-        let assetB_id = assets[1].id  // Remember B's ID to verify it survives
-        var selectedIndices: Set<Int> = [0, 2]  // Select A and C
+        let assetB_id = assets[1].id
+        var selectedIndices: Set<Int> = [0, 2]
 
-        // Replicate handleDelete logic exactly
         let deletedAssets = selectedIndices
             .filter { $0 < assets.count }
             .compactMap { assets[safe: $0] }
@@ -157,17 +174,15 @@ final class HImageViewerLogicTests: XCTestCase {
             PhotoAsset(image: UIImage(systemName: "heart")!)
         ]
         let originalCount = assets.count
-        let selectedIndices: Set<Int> = [5]  // Out of bounds!
+        let selectedIndices: Set<Int> = [5]
 
-        // Replicate handleDelete logic
         let deletedAssets = selectedIndices
-            .filter { $0 < assets.count }       // 5 < 2 = false → filtered out
-            .compactMap { assets[safe: $0] }     // nothing to map
+            .filter { $0 < assets.count }
+            .compactMap { assets[safe: $0] }
         assets.removeAll { asset in
             deletedAssets.contains(where: { $0.id == asset.id })
         }
 
-        // Nothing should be deleted
         XCTAssertEqual(assets.count, originalCount, "No assets should be deleted for out-of-bounds indices")
     }
 }

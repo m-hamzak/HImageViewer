@@ -37,6 +37,7 @@ public final class HImageViewerLauncher {
     ///   - viewController: The view controller to present from.
     ///   - assets: Array of photo assets to display.
     ///   - selectedVideo: Optional video URL to display instead of photos.
+    ///   - initialIndex: The index of the photo to open first. Defaults to `0`.
     ///   - configuration: Configuration object for customizing viewer behavior.
     ///
     /// - Note: The viewer is presented full-screen with a modal presentation style.
@@ -45,11 +46,13 @@ public final class HImageViewerLauncher {
         from viewController: UIViewController,
         assets: [PhotoAsset],
         selectedVideo: URL? = nil,
+        initialIndex: Int = 0,
         configuration: HImageViewerConfiguration
     ) {
         let viewer = HImageViewer(
             assets: .constant(assets),
             selectedVideo: .constant(selectedVideo),
+            initialIndex: initialIndex,
             configuration: configuration
         )
 
