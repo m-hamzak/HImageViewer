@@ -12,11 +12,15 @@ struct TopBar: View {
 
     var body: some View {
         HStack {
-            if !config.selectionMode {
+            if config.selectionMode {
+                Button("Cancel", action: config.onCancelSelection)
+                    .foregroundStyle(.primary)
+                    .padding(.leading, 4)
+            } else {
                 CircleButton(systemName: "xmark", action: config.onDismiss)
             }
             Spacer()
-            if config.isSinglePhotoMode {
+            if config.isSinglePhotoMode && !config.selectionMode {
                 if config.showEditButton {
                     CircleButton(systemName: "pencil", action: config.onEdit)
                 }
@@ -34,7 +38,7 @@ struct TopBarConfig {
     var showEditButton: Bool
     var selectionMode: Bool
     var onDismiss: () -> Void
-    var onSelectToggle: () -> Void
+    var onCancelSelection: () -> Void
     var onEdit: () -> Void
 }
 
