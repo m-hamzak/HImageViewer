@@ -25,10 +25,16 @@ public struct PhotoView: View {
                 Spacer()
             }
             if let image = photo.image {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: isSinglePhotoMode ? .fit : .fill)
-                    .cornerRadius(12) 
+                if isSinglePhotoMode {
+                    ZoomableImageView(image: image)
+                        .cornerRadius(12)
+                        .id(photo.id)
+                } else {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .cornerRadius(12)
+                }
             } else if didFailToLoad {
                 Color.red.opacity(0.2)
                     .overlay(
