@@ -42,72 +42,16 @@ import Photos
 /// - Important: The viewer automatically dismisses when all items are deleted.
 public struct HImageViewer: View {
 
-    // MARK: - Legacy state (photo-only init)
+    // MARK: - Caller bindings (for syncing mutations back)
 
-    @Binding private var assets: [PhotoAsset]
-    @Binding private var selectedVideo: URL?
+    @Binding private var externalAssets: [PhotoAsset]
+    @Binding private var externalSelectedVideo: URL?
+    @Binding private var externalMediaAssets: [MediaAsset]
 
-    // MARK: - Media mode state
+    // MARK: - ViewModel
 
-    @Binding private var mediaAssets: [MediaAsset]
-    private let usesMediaMode: Bool
-
-    // MARK: - Shared state
-
-    @State private var currentIndex: Int
-    @State private var selectionMode: Bool = false
-    @State private var selectedIndices: Set<Int> = []
-    @State private var comment: String
-    @State private var wasImageEdited = false
-    @State private var dragOffset: CGFloat = 0
-
-    private let dismissThreshold: CGFloat = 120
-
+    @StateObject private var vm: HImageViewerViewModel
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var uploadState: HImageViewerUploadState
-
-    private let config: HImageViewerConfiguration
-    private weak var delegate: HImageViewerControlDelegate?
-
-    // MARK: - Computed Properties
-
-    private var isUploading: Bool {
-        (uploadState.progress ?? 0) > 0 && (uploadState.progress ?? 0) < 1.0
-    }
-
-    private var shouldShowSaveButton: Bool {
-        wasImageEdited || config.showSaveButton
-    }
-
-    /// Total number of items — photos+videos in media mode, photos in legacy mode.
-    private var totalCount: Int {
-        usesMediaMode ? mediaAssets.count : assets.count
-    }
-
-    /// The `PhotoAsset` at the current index, or `nil` if the current item is a video.
-    private var currentPhotoAsset: PhotoAsset? {
-        if usesMediaMode {
-            return mediaAssets[safe: currentIndex]?.photoAsset
-        }
-        return assets[safe: currentIndex]
-    }
-
-    /// `"2 / 5"` when there are multiple items and not in selection mode; `nil` otherwise.
-    private var pageCounterText: String? {
-        guard totalCount > 1, !selectionMode else { return nil }
-        return "\(currentIndex + 1) / \(totalCount)"
-    }
-
-    /// Natural-language equivalent of `pageCounterText` for VoiceOver, e.g. `"Page 2 of 5"`.
-    private var accessibilityPageCounterText: String? {
-        guard totalCount > 1, !selectionMode else { return nil }
-        return "Page \(currentIndex + 1) of \(totalCount)"
-    }
-
-    /// 0→1 progress of the drag towards the dismiss threshold.
-    private var dragProgress: Double {
-        min(Double(max(0, dragOffset)) / Double(dismissThreshold), 1.0)
-    }
 
     // MARK: - Initialisation (mixed photo + video)
 
@@ -127,23 +71,15 @@ public struct HImageViewer: View {
         initialIndex: Int = 0,
         configuration: HImageViewerConfiguration = .init()
     ) {
-        self._mediaAssets = mediaAssets
-        self._assets = .constant([])
-        self._selectedVideo = .constant(nil)
-        self.usesMediaMode = true
-        self.config = configuration
-        self._comment = State(initialValue: configuration.initialComment ?? "")
-        self.delegate = configuration.delegate
-
-        let count = mediaAssets.wrappedValue.count
-        let clamped = count == 0 ? 0 : max(0, min(initialIndex, count - 1))
-        self._currentIndex = State(initialValue: clamped)
-
-        if let provided = configuration.uploadState {
-            uploadState = provided
-        } else {
-            uploadState = HImageViewerUploadState()
-        }
+        self._externalMediaAssets = mediaAssets
+        self._externalAssets = .constant([])
+        self._externalSelectedVideo = .constant(nil)
+        self._vm = StateObject(wrappedValue: HImageViewerViewModel(
+            mediaAssets: mediaAssets.wrappedValue,
+            usesMediaMode: true,
+            initialIndex: initialIndex,
+            config: configuration
+        ))
     }
 
     // MARK: - Initialisation (photo-only, legacy)
@@ -165,23 +101,16 @@ public struct HImageViewer: View {
         initialIndex: Int = 0,
         configuration: HImageViewerConfiguration = .init()
     ) {
-        self._assets = assets
-        self._selectedVideo = selectedVideo
-        self._mediaAssets = .constant([])
-        self.usesMediaMode = false
-        self.config = configuration
-        self._comment = State(initialValue: configuration.initialComment ?? "")
-        self.delegate = configuration.delegate
-
-        let count = assets.wrappedValue.count
-        let clamped = count == 0 ? 0 : max(0, min(initialIndex, count - 1))
-        self._currentIndex = State(initialValue: clamped)
-
-        if let provided = configuration.uploadState {
-            uploadState = provided
-        } else {
-            uploadState = HImageViewerUploadState()
-        }
+        self._externalAssets = assets
+        self._externalSelectedVideo = selectedVideo
+        self._externalMediaAssets = .constant([])
+        self._vm = StateObject(wrappedValue: HImageViewerViewModel(
+            assets: assets.wrappedValue,
+            selectedVideo: selectedVideo.wrappedValue,
+            usesMediaMode: false,
+            initialIndex: initialIndex,
+            config: configuration
+        ))
     }
 
     // MARK: - Body
@@ -192,17 +121,17 @@ public struct HImageViewer: View {
             Color.black.ignoresSafeArea()
 
             mainComponent
-                .offset(y: max(0, dragOffset))
-                .opacity(1 - dragProgress * 0.35)
+                .offset(y: max(0, vm.dragOffset))
+                .opacity(1 - vm.dragProgress * 0.35)
                 .gesture(dragToDismissGesture)
                 .onAppear {
-                    if uploadState.progress == 1.0 {
-                        uploadState.progress = nil
+                    if vm.uploadState.progress == 1.0 {
+                        vm.uploadState.progress = nil
                     }
                 }
-                .disabled(uploadState.progress ?? 0 > 0)
+                .disabled(vm.uploadState.progress ?? 0 > 0)
 
-            if let progress = uploadState.progress {
+            if let progress = vm.uploadState.progress {
                 VStack {
                     Spacer()
                     ProgressRingOverlayView(progress: progress, title: "Uploading")
@@ -223,7 +152,10 @@ public struct HImageViewer: View {
         // In glass mode, force dark appearance so materials render as dark frosted glass
         // and white icons/text are always legible against the black canvas.
         // In classic (tinted) mode, follow the system color scheme.
-        .preferredColorScheme(config.isGlassMode ? .dark : nil)
+        .preferredColorScheme(vm.config.isGlassMode ? .dark : nil)
+        // Sync ViewModel mutations back to caller's bindings.
+        .onChangeCompat(of: vm.assets) { externalAssets = $0 }
+        .onChangeCompat(of: vm.mediaAssets) { externalMediaAssets = $0 }
     }
 
     // MARK: - Subviews
@@ -231,73 +163,70 @@ public struct HImageViewer: View {
     private var mainComponent: some View {
         VStack(spacing: 0) {
             TopBar(config: TopBarConfig(
-                showEditButton: config.showEditButton && currentPhotoAsset != nil,
-                showSelectButton: totalCount > 1,
-                selectionMode: selectionMode,
-                pageCounterText: pageCounterText,
-                accessibilityPageLabel: accessibilityPageCounterText,
-                tintColor: config.resolvedTintColor,
-                isGlassMode: config.isGlassMode,
-                onDismiss: { dismiss(); delegate?.didTapCloseButton() },
-                onCancelSelection: {
-                    selectionMode = false
-                    selectedIndices.removeAll()
-                },
-                onSelectToggle: { selectionMode = true },
+                showEditButton: vm.config.showEditButton && vm.currentPhotoAsset != nil,
+                showSelectButton: vm.totalCount > 1,
+                selectionMode: vm.selectionMode,
+                pageCounterText: vm.pageCounterText,
+                accessibilityPageLabel: vm.accessibilityPageCounterText,
+                tintColor: vm.config.resolvedTintColor,
+                isGlassMode: vm.config.isGlassMode,
+                onDismiss: { dismiss(); vm.delegate?.didTapCloseButton() },
+                onCancelSelection: { vm.cancelSelection() },
+                onSelectToggle: { vm.selectionMode = true },
                 onEdit: {
-                    guard let currentPhotoAsset else { return }
-                    delegate?.didTapEditButton(photo: currentPhotoAsset)
+                    guard let asset = vm.currentPhotoAsset else { return }
+                    vm.delegate?.didTapEditButton(photo: asset)
                 }
             ))
 
             ZStack {
                 contentView
-                if selectionMode {
-                    let gridItems: [MediaAsset] = usesMediaMode
-                        ? mediaAssets
-                        : assets.map { MediaAsset.photo($0) }
+                if vm.selectionMode {
+                    let gridItems: [MediaAsset] = vm.usesMediaMode
+                        ? vm.mediaAssets
+                        : vm.assets.map { MediaAsset.photo($0) }
                     MultiPhotoGrid(
                         mediaItems: gridItems,
-                        selectedIndices: selectedIndices,
-                        selectionMode: selectionMode,
-                        onSelectToggle: handleSelection
+                        selectedIndices: vm.selectedIndices,
+                        selectionMode: vm.selectionMode,
+                        onSelectToggle: { vm.handleSelection($0) }
                     )
                     .background(.regularMaterial)
                     .transition(.opacity)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .animation(.easeInOut(duration: 0.2), value: selectionMode)
+            .animation(.easeInOut(duration: 0.2), value: vm.selectionMode)
 
-            if !selectionMode {
-                PageDotsView(currentIndex: currentIndex, count: totalCount)
+            if !vm.selectionMode {
+                PageDotsView(currentIndex: vm.currentIndex, count: vm.totalCount)
             }
 
-            BottomBar(comment: $comment, config: BottomBarConfig(
-                selectionMode: selectionMode,
-                showSaveButton: shouldShowSaveButton,
-                showCommentBox: config.showCommentBox,
-                title: config.title,
-                tintColor: config.resolvedTintColor,
-                isGlassMode: config.isGlassMode,
-                onSave: { handleSave() },
-                onDelete: { handleDelete() }
+            BottomBar(comment: $vm.comment, config: BottomBarConfig(
+                selectionMode: vm.selectionMode,
+                showSaveButton: vm.shouldShowSaveButton,
+                showCommentBox: vm.config.showCommentBox,
+                title: vm.config.title,
+                tintColor: vm.config.resolvedTintColor,
+                isGlassMode: vm.config.isGlassMode,
+                onSave: { vm.handleSave() },
+                onDelete: { vm.handleDelete() }
             ))
         }
-        .onChangeCompat(of: currentPhotoAsset?.image) { newImage in
+        .onChangeCompat(of: vm.currentPhotoAsset?.image) { newImage in
             guard newImage != nil else { return }
-            wasImageEdited = true
+            vm.wasImageEdited = true
         }
-        .onChangeCompat(of: totalCount) { newCount in
+        .onChangeCompat(of: vm.totalCount) { newCount in
             if newCount == 0 {
                 dismiss()
             } else {
-                currentIndex = min(currentIndex, newCount - 1)
+                vm.currentIndex = min(vm.currentIndex, newCount - 1)
             }
         }
-        .onChangeCompat(of: selectionMode) { _ in
+        .onChangeCompat(of: vm.selectionMode) { _ in
             withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                dragOffset = 0
+                vm.dragOffset = 0
             }
         }
     }
@@ -307,31 +236,31 @@ public struct HImageViewer: View {
     private var dragToDismissGesture: some Gesture {
         DragGesture(minimumDistance: 10)
             .onChanged { value in
-                guard !selectionMode, uploadState.progress == nil else { return }
+                guard !vm.selectionMode, vm.uploadState.progress == nil else { return }
                 let translation = value.translation
                 // Activate only for predominantly downward drags to avoid
                 // conflicting with horizontal TabView paging.
                 guard translation.height > 0,
                       translation.height > abs(translation.width) * 1.5 else { return }
-                dragOffset = translation.height
+                vm.dragOffset = translation.height
             }
             .onEnded { value in
                 let rawHeight = value.translation.height
                 let predictedHeight = value.predictedEndTranslation.height
-                let shouldDismiss = rawHeight > dismissThreshold
-                    || predictedHeight > dismissThreshold
+                let shouldDismiss = rawHeight > vm.dismissThreshold
+                    || predictedHeight > vm.dismissThreshold
 
                 if shouldDismiss {
                     withAnimation(.easeOut(duration: 0.25)) {
-                        dragOffset = UIScreen.main.bounds.height
+                        vm.dragOffset = UIScreen.main.bounds.height
                     }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                         dismiss()
-                        delegate?.didTapCloseButton()
+                        vm.delegate?.didTapCloseButton()
                     }
                 } else {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                        dragOffset = 0
+                        vm.dragOffset = 0
                     }
                 }
             }
@@ -341,19 +270,19 @@ public struct HImageViewer: View {
 
     @ViewBuilder
     private var contentView: some View {
-        if usesMediaMode {
-            if !mediaAssets.isEmpty {
-                TabView(selection: $currentIndex) {
-                    ForEach(Array(mediaAssets.enumerated()), id: \.1.id) { index, item in
+        if vm.usesMediaMode {
+            if !vm.mediaAssets.isEmpty {
+                TabView(selection: $vm.currentIndex) {
+                    ForEach(Array(vm.mediaAssets.enumerated()), id: \.1.id) { index, item in
                         Group {
                             switch item.kind {
                             case .photo(let asset):
                                 PhotoView(
                                     photo: asset,
                                     isSinglePhotoMode: true,
-                                    tintColor: config.resolvedTintColor,
-                                    placeholderView: config.placeholderView,
-                                    errorView: config.errorView
+                                    tintColor: vm.config.resolvedTintColor,
+                                    placeholderView: vm.config.placeholderView,
+                                    errorView: vm.config.errorView
                                 )
                                 .padding(.horizontal)
                             case .video(let url):
@@ -366,71 +295,24 @@ public struct HImageViewer: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
-        } else if let videoURL = selectedVideo {
+        } else if let videoURL = vm.selectedVideo {
             VideoPlayerView(videoURL: videoURL)
                 .padding()
-        } else if !assets.isEmpty {
-            TabView(selection: $currentIndex) {
-                ForEach(Array(assets.enumerated()), id: \.1.id) { index, asset in
+        } else if !vm.assets.isEmpty {
+            TabView(selection: $vm.currentIndex) {
+                ForEach(Array(vm.assets.enumerated()), id: \.1.id) { index, asset in
                     PhotoView(
                         photo: asset,
                         isSinglePhotoMode: true,
-                        tintColor: config.resolvedTintColor,
-                        placeholderView: config.placeholderView,
-                        errorView: config.errorView
+                        tintColor: vm.config.resolvedTintColor,
+                        placeholderView: vm.config.placeholderView,
+                        errorView: vm.config.errorView
                     )
                     .padding(.horizontal)
                     .tag(index)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-        }
-    }
-
-    // MARK: - Selection Handling
-
-    private func handleSelection(_ index: Int) {
-        if selectedIndices.contains(index) {
-            selectedIndices.remove(index)
-        } else {
-            selectedIndices.insert(index)
-        }
-    }
-
-    // MARK: - Delete Handling
-
-    private func handleDelete() {
-        if usesMediaMode {
-            let deletedIDs = Set(selectedIndices.compactMap { mediaAssets[safe: $0]?.id })
-            mediaAssets.removeAll { deletedIDs.contains($0.id) }
-            selectedIndices.removeAll()
-            selectionMode = false
-            if !mediaAssets.isEmpty {
-                currentIndex = min(currentIndex, mediaAssets.count - 1)
-            }
-        } else {
-            let deletedAssets = selectedIndices
-                .filter { $0 < assets.count }
-                .compactMap { assets[safe: $0] }
-            assets.removeAll { asset in
-                deletedAssets.contains(where: { $0.id == asset.id })
-            }
-            selectedIndices.removeAll()
-            selectionMode = false
-            if !assets.isEmpty {
-                currentIndex = min(currentIndex, assets.count - 1)
-            }
-        }
-    }
-
-    // MARK: - Save Handling
-
-    private func handleSave() {
-        if usesMediaMode {
-            let photos = mediaAssets.compactMap(\.photoAsset)
-            delegate?.didTapSaveButton(comment: comment, photos: photos)
-        } else {
-            delegate?.didTapSaveButton(comment: comment, photos: assets)
         }
     }
 }

@@ -4,6 +4,9 @@
 //
 //  Created by Hamza Khalid on 22/02/2026.
 //
+//  Tests exercise HImageViewerViewModel directly — every assertion calls
+//  real production code rather than replicating logic inline.
+//
 
 import XCTest
 @testable import HImageViewer
@@ -11,281 +14,399 @@ import XCTest
 @MainActor
 final class HImageViewerLogicTests: XCTestCase {
 
-    // MARK: - isUploading Logic
+    // MARK: - Helpers
+
+    private func makeAssets(_ count: Int) -> [PhotoAsset] {
+        (0..<count).map { _ in PhotoAsset(image: UIImage(systemName: "star")!) }
+    }
+
+    private func makeMediaAssets(_ count: Int) -> [MediaAsset] {
+        (0..<count).map { _ in .photo(PhotoAsset(image: UIImage(systemName: "star")!)) }
+    }
+
+    private func makeVM(
+        assets: [PhotoAsset] = [],
+        mediaAssets: [MediaAsset] = [],
+        usesMediaMode: Bool = false,
+        initialIndex: Int = 0,
+        config: HImageViewerConfiguration = .init()
+    ) -> HImageViewerViewModel {
+        HImageViewerViewModel(
+            assets: assets,
+            mediaAssets: mediaAssets,
+            usesMediaMode: usesMediaMode,
+            initialIndex: initialIndex,
+            config: config
+        )
+    }
+
+    // MARK: - isUploading
 
     func test_isUploading_progressNil() {
-        let progress: Double? = nil
-        let isUploading = (progress ?? 0) > 0 && (progress ?? 0) < 1.0
-        XCTAssertFalse(isUploading, "nil progress = not uploading")
+        let vm = makeVM()
+        vm.uploadState.progress = nil
+        XCTAssertFalse(vm.isUploading, "nil progress = not uploading")
     }
 
     func test_isUploading_progressZero() {
-        let progress: Double? = 0.0
-        let isUploading = (progress ?? 0) > 0 && (progress ?? 0) < 1.0
-        XCTAssertFalse(isUploading, "0.0 progress = not uploading yet")
+        let state = HImageViewerUploadState(progress: 0.0)
+        let vm = makeVM(config: HImageViewerConfiguration(uploadState: state))
+        XCTAssertFalse(vm.isUploading, "0.0 = not yet uploading")
     }
 
     func test_isUploading_progressHalf() {
-        let progress: Double? = 0.5
-        let isUploading = (progress ?? 0) > 0 && (progress ?? 0) < 1.0
-        XCTAssertTrue(isUploading, "0.5 progress = actively uploading")
+        let state = HImageViewerUploadState(progress: 0.5)
+        let vm = makeVM(config: HImageViewerConfiguration(uploadState: state))
+        XCTAssertTrue(vm.isUploading, "0.5 = actively uploading")
     }
 
     func test_isUploading_progressOne() {
-        let progress: Double? = 1.0
-        let isUploading = (progress ?? 0) > 0 && (progress ?? 0) < 1.0
-        XCTAssertFalse(isUploading, "1.0 progress = upload complete, not 'uploading'")
+        let state = HImageViewerUploadState(progress: 1.0)
+        let vm = makeVM(config: HImageViewerConfiguration(uploadState: state))
+        XCTAssertFalse(vm.isUploading, "1.0 = complete, not uploading")
     }
 
-    // MARK: - shouldShowSaveButton Logic (simplified — no longer depends on isSinglePhotoMode)
-
-    func test_shouldShowSave_editedTrue_configFalse() {
-        let wasImageEdited = true
-        let showSaveButton = false
-        let result = wasImageEdited || showSaveButton
-        XCTAssertTrue(result, "Edited image should show save button regardless of config")
+    func test_isUploading_justAboveZero() {
+        let state = HImageViewerUploadState(progress: 0.001)
+        let vm = makeVM(config: HImageViewerConfiguration(uploadState: state))
+        XCTAssertTrue(vm.isUploading, "0.001 = actively uploading")
     }
 
-    func test_shouldShowSave_editedFalse_configTrue() {
-        let wasImageEdited = false
-        let showSaveButton = true
-        let result = wasImageEdited || showSaveButton
-        XCTAssertTrue(result, "config.showSaveButton=true should show save button")
+    func test_isUploading_justBelowOne() {
+        let state = HImageViewerUploadState(progress: 0.999)
+        let vm = makeVM(config: HImageViewerConfiguration(uploadState: state))
+        XCTAssertTrue(vm.isUploading, "0.999 = still uploading")
+    }
+
+    // MARK: - shouldShowSaveButton
+
+    func test_shouldShowSave_wasEdited_configFalse() {
+        let config = HImageViewerConfiguration(showSaveButton: false)
+        let vm = makeVM(config: config)
+        vm.wasImageEdited = true
+        XCTAssertTrue(vm.shouldShowSaveButton,
+                      "Editing overrides showSaveButton=false")
+    }
+
+    func test_shouldShowSave_notEdited_configTrue() {
+        let config = HImageViewerConfiguration(showSaveButton: true)
+        let vm = makeVM(config: config)
+        vm.wasImageEdited = false
+        XCTAssertTrue(vm.shouldShowSaveButton)
     }
 
     func test_shouldShowSave_bothFalse() {
-        let wasImageEdited = false
-        let showSaveButton = false
-        let result = wasImageEdited || showSaveButton
-        XCTAssertFalse(result, "Not edited + config false = hide save button")
+        let config = HImageViewerConfiguration(showSaveButton: false)
+        let vm = makeVM(config: config)
+        vm.wasImageEdited = false
+        XCTAssertFalse(vm.shouldShowSaveButton)
     }
 
-    // MARK: - currentIndex Clamping Logic
+    func test_shouldShowSave_bothTrue() {
+        let config = HImageViewerConfiguration(showSaveButton: true)
+        let vm = makeVM(config: config)
+        vm.wasImageEdited = true
+        XCTAssertTrue(vm.shouldShowSaveButton)
+    }
+
+    // MARK: - initialIndex clamping
 
     func test_initialIndex_clampedToZero_forEmptyAssets() {
-        let count = 0
-        let clamped = count == 0 ? 0 : max(0, min(5, count - 1))
-        XCTAssertEqual(clamped, 0, "Empty assets must clamp index to 0")
+        let vm = makeVM(assets: [], initialIndex: 5)
+        XCTAssertEqual(vm.currentIndex, 0, "Empty assets → index 0")
     }
 
     func test_initialIndex_clampedToLastIndex_whenTooLarge() {
-        let count = 3
-        let initialIndex = 10
-        let clamped = count == 0 ? 0 : max(0, min(initialIndex, count - 1))
-        XCTAssertEqual(clamped, 2, "initialIndex=10 with 3 assets must clamp to 2")
+        let vm = makeVM(assets: makeAssets(3), initialIndex: 10)
+        XCTAssertEqual(vm.currentIndex, 2, "10 with 3 assets → clamps to 2")
     }
 
     func test_initialIndex_clampedToZero_whenNegative() {
-        let count = 3
-        let initialIndex = -1
-        let clamped = count == 0 ? 0 : max(0, min(initialIndex, count - 1))
-        XCTAssertEqual(clamped, 0, "Negative initialIndex must clamp to 0")
+        let vm = makeVM(assets: makeAssets(3), initialIndex: -1)
+        XCTAssertEqual(vm.currentIndex, 0, "Negative → clamps to 0")
     }
 
-    func test_initialIndex_validIndex_unchanged() {
-        let count = 5
-        let initialIndex = 3
-        let clamped = count == 0 ? 0 : max(0, min(initialIndex, count - 1))
-        XCTAssertEqual(clamped, 3, "Valid initialIndex must remain unchanged")
+    func test_initialIndex_valid_unchanged() {
+        let vm = makeVM(assets: makeAssets(5), initialIndex: 3)
+        XCTAssertEqual(vm.currentIndex, 3)
     }
-
-    func test_currentIndex_clampedAfterDeletion() {
-        var assets = [
-            PhotoAsset(image: UIImage(systemName: "star")!),
-            PhotoAsset(image: UIImage(systemName: "heart")!),
-            PhotoAsset(image: UIImage(systemName: "circle")!)
-        ]
-        var currentIndex = 2
-
-        // Simulate deleting the last asset (index 2)
-        assets.removeLast()
-        if !assets.isEmpty {
-            currentIndex = min(currentIndex, assets.count - 1)
-        }
-
-        XCTAssertEqual(currentIndex, 1, "currentIndex must clamp to last valid index after deletion")
-    }
-
-    func test_currentIndex_staysValid_whenDeletingNonCurrentAsset() {
-        var assets = [
-            PhotoAsset(image: UIImage(systemName: "star")!),
-            PhotoAsset(image: UIImage(systemName: "heart")!),
-            PhotoAsset(image: UIImage(systemName: "circle")!)
-        ]
-        var currentIndex = 1
-
-        // Delete asset at index 2 (not the current one)
-        assets.remove(at: 2)
-        if !assets.isEmpty {
-            currentIndex = min(currentIndex, assets.count - 1)
-        }
-
-        XCTAssertEqual(currentIndex, 1, "currentIndex should remain 1 when a later asset is deleted")
-    }
-
-    // MARK: - handleSelection Logic
-
-    func test_selectionToggle() {
-        var selectedIndices: Set<Int> = []
-        let index = 2
-
-        if selectedIndices.contains(index) {
-            selectedIndices.remove(index)
-        } else {
-            selectedIndices.insert(index)
-        }
-        XCTAssertTrue(selectedIndices.contains(2), "First tap should SELECT the photo")
-
-        if selectedIndices.contains(index) {
-            selectedIndices.remove(index)
-        } else {
-            selectedIndices.insert(index)
-        }
-        XCTAssertFalse(selectedIndices.contains(2), "Second tap should DESELECT the photo")
-    }
-
-    // MARK: - handleDelete Logic
-
-    func test_deleteSelectedAssets() {
-        var assets = [
-            PhotoAsset(image: UIImage(systemName: "star")!),
-            PhotoAsset(image: UIImage(systemName: "heart")!),
-            PhotoAsset(image: UIImage(systemName: "circle")!)
-        ]
-        let assetB_id = assets[1].id
-        var selectedIndices: Set<Int> = [0, 2]
-
-        let deletedAssets = selectedIndices
-            .filter { $0 < assets.count }
-            .compactMap { assets[safe: $0] }
-        assets.removeAll { asset in
-            deletedAssets.contains(where: { $0.id == asset.id })
-        }
-        selectedIndices.removeAll()
-
-        XCTAssertEqual(assets.count, 1, "Only 1 asset should remain after deleting 2")
-        XCTAssertEqual(assets.first?.id, assetB_id, "The remaining asset should be B (heart)")
-        XCTAssertTrue(selectedIndices.isEmpty, "Selection should be cleared after delete")
-    }
-
-    func test_deleteOutOfBoundsIgnored() {
-        var assets = [
-            PhotoAsset(image: UIImage(systemName: "star")!),
-            PhotoAsset(image: UIImage(systemName: "heart")!)
-        ]
-        let originalCount = assets.count
-        let selectedIndices: Set<Int> = [5]
-
-        let deletedAssets = selectedIndices
-            .filter { $0 < assets.count }
-            .compactMap { assets[safe: $0] }
-        assets.removeAll { asset in
-            deletedAssets.contains(where: { $0.id == asset.id })
-        }
-
-        XCTAssertEqual(assets.count, originalCount, "No assets should be deleted for out-of-bounds indices")
-    }
-
-    // MARK: - isUploading boundary values (additional)
-
-    func test_isUploading_justAboveZero_isTrue() {
-        let progress: Double? = 0.001
-        let isUploading = (progress ?? 0) > 0 && (progress ?? 0) < 1.0
-        XCTAssertTrue(isUploading, "0.001 is actively uploading")
-    }
-
-    func test_isUploading_justBelowOne_isTrue() {
-        let progress: Double? = 0.999
-        let isUploading = (progress ?? 0) > 0 && (progress ?? 0) < 1.0
-        XCTAssertTrue(isUploading, "0.999 is still uploading")
-    }
-
-    // MARK: - shouldShowSaveButton additional
-
-    func test_shouldShowSave_bothTrue() {
-        XCTAssertTrue(true || true, "edited AND config both true = show save")
-    }
-
-    // MARK: - initialIndex edge cases
 
     func test_initialIndex_exactlyLastIndex_unchanged() {
-        let count = 4
-        let clamped = count == 0 ? 0 : max(0, min(3, count - 1))
-        XCTAssertEqual(clamped, 3, "Last valid index must pass through unchanged")
+        let vm = makeVM(assets: makeAssets(4), initialIndex: 3)
+        XCTAssertEqual(vm.currentIndex, 3)
     }
 
-    func test_initialIndex_singleAsset_alwaysClampsToZero() {
-        let count = 1
-        let clamped = count == 0 ? 0 : max(0, min(100, count - 1))
-        XCTAssertEqual(clamped, 0)
+    func test_initialIndex_singleAsset_alwaysZero() {
+        let vm = makeVM(assets: makeAssets(1), initialIndex: 100)
+        XCTAssertEqual(vm.currentIndex, 0)
     }
 
-    // MARK: - handleDelete additional
+    // MARK: - totalCount
 
-    func test_deleteAllAssets_leavesEmptyArray() {
-        var assets = [
-            PhotoAsset(image: UIImage(systemName: "star")!),
-            PhotoAsset(image: UIImage(systemName: "heart")!)
+    func test_totalCount_legacyMode_returnsAssetsCount() {
+        let vm = makeVM(assets: makeAssets(4))
+        XCTAssertEqual(vm.totalCount, 4)
+    }
+
+    func test_totalCount_mediaMode_returnsMediaAssetsCount() {
+        let vm = makeVM(mediaAssets: makeMediaAssets(6), usesMediaMode: true)
+        XCTAssertEqual(vm.totalCount, 6)
+    }
+
+    func test_totalCount_emptyAssets_isZero() {
+        let vm = makeVM(assets: [])
+        XCTAssertEqual(vm.totalCount, 0)
+    }
+
+    // MARK: - pageCounterText
+
+    func test_pageCounterText_singleItem_isNil() {
+        let vm = makeVM(assets: makeAssets(1))
+        XCTAssertNil(vm.pageCounterText)
+    }
+
+    func test_pageCounterText_multipleItems_formatsCorrectly() {
+        let vm = makeVM(assets: makeAssets(5), initialIndex: 1)
+        XCTAssertEqual(vm.pageCounterText, "2 / 5")
+    }
+
+    func test_pageCounterText_inSelectionMode_isNil() {
+        let vm = makeVM(assets: makeAssets(5))
+        vm.selectionMode = true
+        XCTAssertNil(vm.pageCounterText)
+    }
+
+    func test_pageCounterText_emptyAssets_isNil() {
+        let vm = makeVM(assets: [])
+        XCTAssertNil(vm.pageCounterText)
+    }
+
+    // MARK: - accessibilityPageCounterText
+
+    func test_accessibilityPageCounterText_multipleItems_naturalLanguage() {
+        let vm = makeVM(assets: makeAssets(5), initialIndex: 1)
+        XCTAssertEqual(vm.accessibilityPageCounterText, "Page 2 of 5")
+    }
+
+    func test_accessibilityPageCounterText_singleItem_isNil() {
+        let vm = makeVM(assets: makeAssets(1))
+        XCTAssertNil(vm.accessibilityPageCounterText)
+    }
+
+    func test_accessibilityPageCounterText_inSelectionMode_isNil() {
+        let vm = makeVM(assets: makeAssets(3))
+        vm.selectionMode = true
+        XCTAssertNil(vm.accessibilityPageCounterText)
+    }
+
+    // MARK: - currentPhotoAsset
+
+    func test_currentPhotoAsset_legacyMode_returnsCorrectAsset() {
+        let assets = makeAssets(3)
+        let vm = makeVM(assets: assets, initialIndex: 1)
+        XCTAssertEqual(vm.currentPhotoAsset?.id, assets[1].id)
+    }
+
+    func test_currentPhotoAsset_mediaMode_photoItem_returnsAsset() {
+        let pa = PhotoAsset(image: UIImage(systemName: "star")!)
+        let items = [MediaAsset.photo(pa)]
+        let vm = makeVM(mediaAssets: items, usesMediaMode: true)
+        XCTAssertEqual(vm.currentPhotoAsset?.id, pa.id)
+    }
+
+    func test_currentPhotoAsset_mediaMode_videoItem_isNil() {
+        let items = [MediaAsset.video(URL(string: "https://example.com/v.mp4")!)]
+        let vm = makeVM(mediaAssets: items, usesMediaMode: true)
+        XCTAssertNil(vm.currentPhotoAsset)
+    }
+
+    func test_currentPhotoAsset_emptyAssets_isNil() {
+        let vm = makeVM(assets: [])
+        XCTAssertNil(vm.currentPhotoAsset)
+    }
+
+    // MARK: - dragProgress
+
+    func test_dragProgress_zero_isZero() {
+        let vm = makeVM()
+        vm.dragOffset = 0
+        XCTAssertEqual(vm.dragProgress, 0.0, accuracy: 0.001)
+    }
+
+    func test_dragProgress_atThreshold_isOne() {
+        let vm = makeVM()
+        vm.dragOffset = vm.dismissThreshold
+        XCTAssertEqual(vm.dragProgress, 1.0, accuracy: 0.001)
+    }
+
+    func test_dragProgress_halfThreshold_isHalf() {
+        let vm = makeVM()
+        vm.dragOffset = vm.dismissThreshold / 2
+        XCTAssertEqual(vm.dragProgress, 0.5, accuracy: 0.001)
+    }
+
+    func test_dragProgress_beyondThreshold_clampedToOne() {
+        let vm = makeVM()
+        vm.dragOffset = vm.dismissThreshold * 10
+        XCTAssertEqual(vm.dragProgress, 1.0, accuracy: 0.001)
+    }
+
+    func test_dragProgress_negative_isZero() {
+        let vm = makeVM()
+        vm.dragOffset = -50
+        XCTAssertEqual(vm.dragProgress, 0.0, accuracy: 0.001)
+    }
+
+    // MARK: - handleSelection
+
+    func test_handleSelection_firstTap_selects() {
+        let vm = makeVM(assets: makeAssets(3))
+        vm.handleSelection(1)
+        XCTAssertTrue(vm.selectedIndices.contains(1))
+    }
+
+    func test_handleSelection_secondTap_deselects() {
+        let vm = makeVM(assets: makeAssets(3))
+        vm.handleSelection(1)
+        vm.handleSelection(1)
+        XCTAssertFalse(vm.selectedIndices.contains(1))
+    }
+
+    func test_handleSelection_multipleItems() {
+        let vm = makeVM(assets: makeAssets(5))
+        vm.handleSelection(0)
+        vm.handleSelection(2)
+        vm.handleSelection(4)
+        XCTAssertEqual(vm.selectedIndices, [0, 2, 4])
+    }
+
+    func test_handleSelection_threeToggles_leavesSelected() {
+        let vm = makeVM(assets: makeAssets(3))
+        vm.handleSelection(0)
+        vm.handleSelection(0)
+        vm.handleSelection(0)
+        XCTAssertTrue(vm.selectedIndices.contains(0), "Odd toggles → selected")
+    }
+
+    // MARK: - cancelSelection
+
+    func test_cancelSelection_clearsIndicesAndMode() {
+        let vm = makeVM(assets: makeAssets(3))
+        vm.selectionMode = true
+        vm.selectedIndices = [0, 1, 2]
+        vm.cancelSelection()
+        XCTAssertFalse(vm.selectionMode)
+        XCTAssertTrue(vm.selectedIndices.isEmpty)
+    }
+
+    func test_cancelSelection_idempotent() {
+        let vm = makeVM(assets: makeAssets(3))
+        vm.cancelSelection()
+        vm.cancelSelection()
+        XCTAssertFalse(vm.selectionMode)
+        XCTAssertTrue(vm.selectedIndices.isEmpty)
+    }
+
+    // MARK: - handleDelete (legacy mode)
+
+    func test_handleDelete_removesSelectedAssets() {
+        let assets = makeAssets(3)
+        let keepID = assets[1].id
+        let vm = makeVM(assets: assets)
+        vm.selectedIndices = [0, 2]
+        vm.handleDelete()
+        XCTAssertEqual(vm.assets.count, 1)
+        XCTAssertEqual(vm.assets.first?.id, keepID)
+    }
+
+    func test_handleDelete_clearsSelectionAndMode() {
+        let vm = makeVM(assets: makeAssets(3))
+        vm.selectionMode = true
+        vm.selectedIndices = [0]
+        vm.handleDelete()
+        XCTAssertTrue(vm.selectedIndices.isEmpty)
+        XCTAssertFalse(vm.selectionMode)
+    }
+
+    func test_handleDelete_outOfBoundsIndex_ignored() {
+        let vm = makeVM(assets: makeAssets(2))
+        vm.selectedIndices = [5]
+        vm.handleDelete()
+        XCTAssertEqual(vm.assets.count, 2, "Out-of-bounds selection must not delete anything")
+    }
+
+    func test_handleDelete_allAssets_leavesEmpty() {
+        let vm = makeVM(assets: makeAssets(2))
+        vm.selectedIndices = [0, 1]
+        vm.handleDelete()
+        XCTAssertTrue(vm.assets.isEmpty)
+    }
+
+    func test_handleDelete_clampsCurrentIndex() {
+        let vm = makeVM(assets: makeAssets(3), initialIndex: 2)
+        vm.selectedIndices = [1, 2]
+        vm.handleDelete()
+        XCTAssertEqual(vm.assets.count, 1)
+        XCTAssertEqual(vm.currentIndex, 0, "currentIndex must clamp after deletion")
+    }
+
+    func test_handleDelete_largeSelection_correctCountRemains() {
+        let vm = makeVM(assets: makeAssets(10))
+        vm.selectedIndices = [0, 2, 4, 6, 8]
+        vm.handleDelete()
+        XCTAssertEqual(vm.assets.count, 5)
+    }
+
+    // MARK: - handleDelete (media mode)
+
+    func test_handleDelete_mediaMode_removesSelectedItems() {
+        let items = makeMediaAssets(4)
+        let keepID = items[1].id
+        let vm = makeVM(mediaAssets: items, usesMediaMode: true)
+        vm.selectedIndices = [0, 2, 3]
+        vm.handleDelete()
+        XCTAssertEqual(vm.mediaAssets.count, 1)
+        XCTAssertEqual(vm.mediaAssets.first?.id, keepID)
+    }
+
+    func test_handleDelete_mediaMode_clearsSelectionAndMode() {
+        let vm = makeVM(mediaAssets: makeMediaAssets(3), usesMediaMode: true)
+        vm.selectionMode = true
+        vm.selectedIndices = [0]
+        vm.handleDelete()
+        XCTAssertTrue(vm.selectedIndices.isEmpty)
+        XCTAssertFalse(vm.selectionMode)
+    }
+
+    // MARK: - handleSave
+
+    func test_handleSave_legacyMode_callsDelegate() {
+        let delegate = MockDelegate()
+        let config = HImageViewerConfiguration(delegate: delegate)
+        let vm = makeVM(assets: makeAssets(2), config: config)
+        vm.comment = "Nice photo"
+        vm.handleSave()
+        XCTAssertTrue(delegate.didTapSaveCalled)
+        XCTAssertEqual(delegate.lastSaveComment, "Nice photo")
+        XCTAssertEqual(delegate.lastSavePhotos?.count, 2)
+    }
+
+    func test_handleSave_mediaMode_onlyPassesPhotos() {
+        let delegate = MockDelegate()
+        let config = HImageViewerConfiguration(delegate: delegate)
+        let items: [MediaAsset] = [
+            .photo(PhotoAsset(image: UIImage(systemName: "star")!)),
+            .video(URL(string: "https://example.com/v.mp4")!)
         ]
-        let selectedIndices: Set<Int> = [0, 1]
-        let toDelete = selectedIndices.filter { $0 < assets.count }.compactMap { assets[safe: $0] }
-        assets.removeAll { asset in toDelete.contains(where: { $0.id == asset.id }) }
-
-        XCTAssertTrue(assets.isEmpty, "Deleting all assets must produce an empty array")
+        let vm = makeVM(mediaAssets: items, usesMediaMode: true, config: config)
+        vm.handleSave()
+        XCTAssertTrue(delegate.didTapSaveCalled)
+        XCTAssertEqual(delegate.lastSavePhotos?.count, 1,
+                       "Videos must be excluded from the photos passed to the delegate")
     }
 
-    func test_deleteLargeSelection_correctCountRemains() {
-        var assets = (0..<10).map { _ in PhotoAsset(image: UIImage(systemName: "star")!) }
-        let selectedIndices: Set<Int> = [0, 2, 4, 6, 8]
-        let toDelete = selectedIndices.compactMap { assets[safe: $0] }
-        assets.removeAll { a in toDelete.contains(where: { $0.id == a.id }) }
-        XCTAssertEqual(assets.count, 5, "Deleting 5 of 10 must leave 5")
-    }
-
-    func test_currentIndex_afterDeletion_clampedWhenAtEnd() {
-        var assets = [
-            PhotoAsset(image: UIImage(systemName: "star")!),
-            PhotoAsset(image: UIImage(systemName: "heart")!),
-            PhotoAsset(image: UIImage(systemName: "circle")!)
-        ]
-        var currentIndex = 2
-        let selectedIndices: Set<Int> = [1, 2]
-        let toDelete = selectedIndices.compactMap { assets[safe: $0] }
-        assets.removeAll { a in toDelete.contains(where: { $0.id == a.id }) }
-        if !assets.isEmpty { currentIndex = min(currentIndex, assets.count - 1) }
-        XCTAssertEqual(assets.count, 1)
-        XCTAssertEqual(currentIndex, 0)
-    }
-
-    // MARK: - handleSelection additional
-
-    func test_selectionInsert_multipleItems() {
-        var selectedIndices: Set<Int> = []
-        [0, 2, 4].forEach { selectedIndices.insert($0) }
-        XCTAssertEqual(selectedIndices.count, 3)
-        XCTAssertTrue(selectedIndices.contains(2))
-    }
-
-    func test_selectionRemoveAll_isEmpty() {
-        var selectedIndices: Set<Int> = [0, 1, 2, 3]
-        selectedIndices.removeAll()
-        XCTAssertTrue(selectedIndices.isEmpty)
-    }
-
-    func test_selectionToggle_sameIndex_threeTimes() {
-        var selectedIndices: Set<Int> = []
-        for _ in 0..<3 {
-            if selectedIndices.contains(1) { selectedIndices.remove(1) }
-            else { selectedIndices.insert(1) }
-        }
-        // 3 toggles (odd count) → should be selected at the end
-        XCTAssertTrue(selectedIndices.contains(1), "Odd number of toggles leaves item selected")
-    }
-
-    // MARK: - pageCounterText edge cases
-
-    func test_pageCounterText_largeNumbers() {
-        let counter = "\(100) / \(200)"
-        XCTAssertEqual(counter, "100 / 200")
+    func test_handleSave_noDelegate_doesNotCrash() {
+        let vm = makeVM(assets: makeAssets(1))
+        XCTAssertNoThrow(vm.handleSave())
     }
 }
