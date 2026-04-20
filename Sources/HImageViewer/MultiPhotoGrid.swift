@@ -14,7 +14,7 @@ import UniformTypeIdentifiers
 /// Each tile displays a photo thumbnail (via `PhotoView`) or a video placeholder icon.
 /// A checkmark overlay appears on top of selected tiles. Long-press and drag any tile
 /// to reorder items within the grid.
-public struct MultiPhotoGrid: View {
+struct MultiPhotoGrid: View {
 
     // MARK: - Properties
 
@@ -32,7 +32,7 @@ public struct MultiPhotoGrid: View {
 
     // MARK: - Body
 
-    public var body: some View {
+    var body: some View {
         LazyVGrid(
             columns: [GridItem(.adaptive(minimum: itemSize), spacing: 10)],
             spacing: 10

@@ -47,7 +47,7 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
     public let id = UUID()
     public let phAsset: PHAsset?
     @Published public var image: UIImage?
-    public var imageURL: URL?
+    public let imageURL: URL?
 
     // Track active requests for cancellation
     private var currentRequestID: PHImageRequestID?
@@ -65,6 +65,7 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
     public init(phAsset: PHAsset) {
         self.phAsset = phAsset
         self.image = nil
+        self.imageURL = nil
     }
 
     /// Creates a photo asset from a UIImage.
@@ -75,6 +76,7 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
     public init(image: UIImage) {
         self.image = image
         self.phAsset = nil
+        self.imageURL = nil
     }
 
     /// Creates a photo asset from a remote image URL.

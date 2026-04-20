@@ -76,7 +76,8 @@ final class HImageViewerViewModel: ObservableObject {
 
     /// `true` while an upload is actively in progress (progress > 0 and < 1).
     var isUploading: Bool {
-        (uploadState.progress ?? 0) > 0 && (uploadState.progress ?? 0) < 1.0
+        let p = uploadState.progress ?? 0
+        return p > 0 && p < 1.0
     }
 
     /// Whether the Save button should be visible.
