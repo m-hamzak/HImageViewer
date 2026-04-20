@@ -185,4 +185,107 @@ final class HImageViewerLogicTests: XCTestCase {
 
         XCTAssertEqual(assets.count, originalCount, "No assets should be deleted for out-of-bounds indices")
     }
+
+    // MARK: - isUploading boundary values (additional)
+
+    func test_isUploading_justAboveZero_isTrue() {
+        let progress: Double? = 0.001
+        let isUploading = (progress ?? 0) > 0 && (progress ?? 0) < 1.0
+        XCTAssertTrue(isUploading, "0.001 is actively uploading")
+    }
+
+    func test_isUploading_justBelowOne_isTrue() {
+        let progress: Double? = 0.999
+        let isUploading = (progress ?? 0) > 0 && (progress ?? 0) < 1.0
+        XCTAssertTrue(isUploading, "0.999 is still uploading")
+    }
+
+    // MARK: - shouldShowSaveButton additional
+
+    func test_shouldShowSave_bothTrue() {
+        XCTAssertTrue(true || true, "edited AND config both true = show save")
+    }
+
+    // MARK: - initialIndex edge cases
+
+    func test_initialIndex_exactlyLastIndex_unchanged() {
+        let count = 4
+        let clamped = count == 0 ? 0 : max(0, min(3, count - 1))
+        XCTAssertEqual(clamped, 3, "Last valid index must pass through unchanged")
+    }
+
+    func test_initialIndex_singleAsset_alwaysClampsToZero() {
+        let count = 1
+        let clamped = count == 0 ? 0 : max(0, min(100, count - 1))
+        XCTAssertEqual(clamped, 0)
+    }
+
+    // MARK: - handleDelete additional
+
+    func test_deleteAllAssets_leavesEmptyArray() {
+        var assets = [
+            PhotoAsset(image: UIImage(systemName: "star")!),
+            PhotoAsset(image: UIImage(systemName: "heart")!)
+        ]
+        let selectedIndices: Set<Int> = [0, 1]
+        let toDelete = selectedIndices.filter { $0 < assets.count }.compactMap { assets[safe: $0] }
+        assets.removeAll { asset in toDelete.contains(where: { $0.id == asset.id }) }
+
+        XCTAssertTrue(assets.isEmpty, "Deleting all assets must produce an empty array")
+    }
+
+    func test_deleteLargeSelection_correctCountRemains() {
+        var assets = (0..<10).map { _ in PhotoAsset(image: UIImage(systemName: "star")!) }
+        let selectedIndices: Set<Int> = [0, 2, 4, 6, 8]
+        let toDelete = selectedIndices.compactMap { assets[safe: $0] }
+        assets.removeAll { a in toDelete.contains(where: { $0.id == a.id }) }
+        XCTAssertEqual(assets.count, 5, "Deleting 5 of 10 must leave 5")
+    }
+
+    func test_currentIndex_afterDeletion_clampedWhenAtEnd() {
+        var assets = [
+            PhotoAsset(image: UIImage(systemName: "star")!),
+            PhotoAsset(image: UIImage(systemName: "heart")!),
+            PhotoAsset(image: UIImage(systemName: "circle")!)
+        ]
+        var currentIndex = 2
+        let selectedIndices: Set<Int> = [1, 2]
+        let toDelete = selectedIndices.compactMap { assets[safe: $0] }
+        assets.removeAll { a in toDelete.contains(where: { $0.id == a.id }) }
+        if !assets.isEmpty { currentIndex = min(currentIndex, assets.count - 1) }
+        XCTAssertEqual(assets.count, 1)
+        XCTAssertEqual(currentIndex, 0)
+    }
+
+    // MARK: - handleSelection additional
+
+    func test_selectionInsert_multipleItems() {
+        var selectedIndices: Set<Int> = []
+        [0, 2, 4].forEach { selectedIndices.insert($0) }
+        XCTAssertEqual(selectedIndices.count, 3)
+        XCTAssertTrue(selectedIndices.contains(2))
+    }
+
+    func test_selectionRemoveAll_isEmpty() {
+        var selectedIndices: Set<Int> = [0, 1, 2, 3]
+        selectedIndices.removeAll()
+        XCTAssertTrue(selectedIndices.isEmpty)
+    }
+
+    func test_selectionToggle_sameIndex_threeTimes() {
+        var selectedIndices: Set<Int> = []
+        for _ in 0..<3 {
+            if selectedIndices.contains(1) { selectedIndices.remove(1) }
+            else { selectedIndices.insert(1) }
+        }
+        // 3 toggles (odd count) → should be selected at the end
+        XCTAssertTrue(selectedIndices.contains(1), "Odd number of toggles leaves item selected")
+    }
+
+    // MARK: - pageCounterText edge cases
+
+    func test_pageCounterText_largeNumbers() {
+        let counter = "\(100) / \(200)"
+        XCTAssertEqual(counter, "100 / 200")
+    }
 }

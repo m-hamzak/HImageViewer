@@ -67,4 +67,52 @@ final class HImageViewerUploadStateTests: XCTestCase {
         XCTAssertEqual(state.progress, 0.0, "Progress should be exactly 0.0")
         XCTAssertNotNil(state.progress, "0.0 is NOT nil — they have different meanings")
     }
+
+    // MARK: - Boundary values
+
+    func test_progress_atNearlyComplete_isNotNil() {
+        let state = HImageViewerUploadState(progress: 0.99)
+        XCTAssertNotNil(state.progress)
+        XCTAssertEqual(state.progress!, 0.99, accuracy: 0.0001)
+    }
+
+    func test_progress_incrementalUpdates_allStored() {
+        let state = HImageViewerUploadState()
+        let values: [Double] = [0.1, 0.25, 0.5, 0.75, 0.99, 1.0]
+        for v in values {
+            state.progress = v
+            XCTAssertEqual(state.progress!, v, accuracy: 0.0001)
+        }
+    }
+
+    func test_progress_setToNilAfterComplete_isNil() {
+        let state = HImageViewerUploadState(progress: 1.0)
+        state.progress = nil
+        XCTAssertNil(state.progress)
+    }
+
+    func test_isUploading_at0_99() {
+        let p: Double? = 0.99
+        XCTAssertTrue((p ?? 0) > 0 && (p ?? 0) < 1.0)
+    }
+
+    func test_isUploading_at0_01() {
+        let p: Double? = 0.01
+        XCTAssertTrue((p ?? 0) > 0 && (p ?? 0) < 1.0)
+    }
+
+    func test_isUploading_atExactlyOne_isFalse() {
+        let p: Double? = 1.0
+        XCTAssertFalse((p ?? 0) > 0 && (p ?? 0) < 1.0)
+    }
+
+    func test_progress_canOscillateBetweenNilAndValue() {
+        let state = HImageViewerUploadState()
+        state.progress = 0.5
+        XCTAssertNotNil(state.progress)
+        state.progress = nil
+        XCTAssertNil(state.progress)
+        state.progress = 0.8
+        XCTAssertEqual(state.progress, 0.8)
+    }
 }

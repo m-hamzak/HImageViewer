@@ -116,6 +116,56 @@ final class PageIndicatorTests: XCTestCase {
         let image = renderView(view, size: CGSize(width: 375, height: 56))
         XCTAssertGreaterThan(image.size.width, 0)
     }
+
+    // MARK: - Counter format additional
+
+    func test_pageCounterText_largeCount() {
+        XCTAssertEqual(makeCounterText(currentIndex: 99, count: 100, selectionMode: false), "100 / 100")
+    }
+
+    func test_pageCounterText_firstOfMany() {
+        XCTAssertEqual(makeCounterText(currentIndex: 0, count: 50, selectionMode: false), "1 / 50")
+    }
+
+    func test_pageCounterText_twoAssetsSelectionMode_isNil() {
+        XCTAssertNil(makeCounterText(currentIndex: 0, count: 2, selectionMode: true))
+    }
+
+    func test_pageCounterText_exactlyOneAsset_isNil() {
+        XCTAssertNil(makeCounterText(currentIndex: 0, count: 1, selectionMode: false))
+    }
+
+    // MARK: - PageDotsView.shouldShow boundaries
+
+    func test_dots_shownForThreeAssets() {
+        XCTAssertTrue(PageDotsView(currentIndex: 0, count: 3).shouldShow)
+    }
+
+    func test_dots_shownForSevenAssets() {
+        XCTAssertTrue(PageDotsView(currentIndex: 3, count: 7).shouldShow)
+    }
+
+    func test_dots_hiddenForNineAssets() {
+        XCTAssertFalse(PageDotsView(currentIndex: 0, count: 9).shouldShow)
+    }
+
+    func test_dots_hiddenForVeryLargeCount() {
+        XCTAssertFalse(PageDotsView(currentIndex: 0, count: 1_000).shouldShow)
+    }
+
+    func test_dots_allCountsFromTwoToMaxShouldShow() {
+        for count in 2...PageDotsView.maxDots {
+            XCTAssertTrue(PageDotsView(currentIndex: 0, count: count).shouldShow,
+                          "count=\(count) must show dots")
+        }
+    }
+
+    func test_dots_countBelowTwoDoesNotShow() {
+        for count in [0, 1] {
+            XCTAssertFalse(PageDotsView(currentIndex: 0, count: count).shouldShow,
+                           "count=\(count) must not show dots")
+        }
+    }
 }
 
 // MARK: - Helpers

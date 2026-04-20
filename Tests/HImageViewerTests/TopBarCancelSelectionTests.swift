@@ -6,6 +6,7 @@
 //
 
 import XCTest
+import SwiftUI
 @testable import HImageViewer
 
 @MainActor
@@ -105,5 +106,56 @@ final class TopBarCancelSelectionTests: XCTestCase {
         // If ImageViewerLauncher still exists, this would catch the stale reference.
         let type: HImageViewerLauncher.Type = HImageViewerLauncher.self
         XCTAssertNotNil(type, "HImageViewerLauncher type must exist with the correct prefix")
+    }
+
+    // MARK: - TopBarConfig defaults
+
+    func test_topBarConfig_isGlassMode_defaultIsTrue() {
+        let config = TopBarConfig(
+            showEditButton: false, showSelectButton: false,
+            selectionMode: false, pageCounterText: nil,
+            onDismiss: {}, onCancelSelection: {}, onSelectToggle: {}, onEdit: {}
+        )
+        XCTAssertTrue(config.isGlassMode, "Default isGlassMode must be true")
+    }
+
+    func test_topBarConfig_tintColor_defaultIsBlue() {
+        let config = TopBarConfig(
+            showEditButton: false, showSelectButton: false,
+            selectionMode: false, pageCounterText: nil,
+            onDismiss: {}, onCancelSelection: {}, onSelectToggle: {}, onEdit: {}
+        )
+        XCTAssertEqual(config.tintColor, Color.blue)
+    }
+
+    func test_topBarConfig_onEdit_isCalled() {
+        var editCalled = false
+        let config = TopBarConfig(
+            showEditButton: true, showSelectButton: false,
+            selectionMode: false, pageCounterText: nil,
+            onDismiss: {}, onCancelSelection: {}, onSelectToggle: {},
+            onEdit: { editCalled = true }
+        )
+        config.onEdit()
+        XCTAssertTrue(editCalled)
+    }
+
+    func test_topBarConfig_customTintColor_storedCorrectly() {
+        let config = TopBarConfig(
+            showEditButton: false, showSelectButton: false,
+            selectionMode: false, pageCounterText: nil,
+            tintColor: .purple,
+            onDismiss: {}, onCancelSelection: {}, onSelectToggle: {}, onEdit: {}
+        )
+        XCTAssertEqual(config.tintColor, Color.purple)
+    }
+
+    func test_topBarConfig_pageCounterText_storedCorrectly() {
+        let config = TopBarConfig(
+            showEditButton: false, showSelectButton: false,
+            selectionMode: false, pageCounterText: "3 / 7",
+            onDismiss: {}, onCancelSelection: {}, onSelectToggle: {}, onEdit: {}
+        )
+        XCTAssertEqual(config.pageCounterText, "3 / 7")
     }
 }

@@ -74,4 +74,82 @@ final class HImageViewerDelegateTests: XCTestCase {
 
         // If we reach here, selective adoption works correctly
     }
+
+    // MARK: - Multiple calls
+
+    func test_saveCalledMultipleTimes_lastCommentWins() {
+        let delegate = MockDelegate()
+        let photo = PhotoAsset(image: UIImage(systemName: "star")!)
+        delegate.didTapSaveButton(comment: "first",  photos: [photo])
+        delegate.didTapSaveButton(comment: "second", photos: [])
+        XCTAssertEqual(delegate.lastSaveComment, "second")
+    }
+
+    func test_saveCalledMultipleTimes_lastPhotosWin() {
+        let delegate = MockDelegate()
+        let p1 = PhotoAsset(image: UIImage(systemName: "star")!)
+        let p2 = PhotoAsset(image: UIImage(systemName: "heart")!)
+        delegate.didTapSaveButton(comment: "a", photos: [p1])
+        delegate.didTapSaveButton(comment: "b", photos: [p1, p2])
+        XCTAssertEqual(delegate.lastSavePhotos?.count, 2)
+    }
+
+    func test_closeCalledMultipleTimes_flagRemainsTrue() {
+        let delegate = MockDelegate()
+        delegate.didTapCloseButton()
+        delegate.didTapCloseButton()
+        XCTAssertTrue(delegate.didTapCloseCalled)
+    }
+
+    func test_reset_clearsAllFields() {
+        let delegate = MockDelegate()
+        let photo = PhotoAsset(image: UIImage(systemName: "star")!)
+        delegate.didTapSaveButton(comment: "x", photos: [photo])
+        delegate.didTapCloseButton()
+        delegate.didTapEditButton(photo: photo)
+        delegate.reset()
+
+        XCTAssertFalse(delegate.didTapSaveCalled)
+        XCTAssertFalse(delegate.didTapCloseCalled)
+        XCTAssertFalse(delegate.didTapEditCalled)
+        XCTAssertNil(delegate.lastSaveComment)
+        XCTAssertNil(delegate.lastSavePhotos)
+        XCTAssertNil(delegate.lastEditPhoto)
+    }
+
+    func test_saveWithEmptyPhotos_emptyArrayPropagated() {
+        let delegate = MockDelegate()
+        delegate.didTapSaveButton(comment: "", photos: [])
+        XCTAssertEqual(delegate.lastSavePhotos?.count, 0)
+    }
+
+    func test_editPhoto_idMatchesPassedPhoto() {
+        let delegate = MockDelegate()
+        let photo = PhotoAsset(image: UIImage(systemName: "star")!)
+        delegate.didTapEditButton(photo: photo)
+        XCTAssertEqual(delegate.lastEditPhoto?.id, photo.id)
+    }
+
+    func test_saveNotCalledInitially() {
+        let delegate = MockDelegate()
+        XCTAssertFalse(delegate.didTapSaveCalled)
+        XCTAssertNil(delegate.lastSaveComment)
+    }
+
+    func test_allThreeCallbacks_independentFlags() {
+        let delegate = MockDelegate()
+        let photo = PhotoAsset(image: UIImage(systemName: "star")!)
+
+        delegate.didTapSaveButton(comment: "c", photos: [photo])
+        XCTAssertTrue(delegate.didTapSaveCalled)
+        XCTAssertFalse(delegate.didTapCloseCalled)
+        XCTAssertFalse(delegate.didTapEditCalled)
+
+        delegate.didTapCloseButton()
+        XCTAssertTrue(delegate.didTapCloseCalled)
+        XCTAssertFalse(delegate.didTapEditCalled)
+
+        delegate.didTapEditButton(photo: photo)
+        XCTAssertTrue(delegate.didTapEditCalled)
+    }
 }

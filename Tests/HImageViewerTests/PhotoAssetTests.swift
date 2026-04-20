@@ -225,4 +225,96 @@ final class PhotoAssetTests: XCTestCase {
         asset.cancelPendingLoad()
         // Reaching here = no crash
     }
+
+    // MARK: - URL init properties
+
+    func test_initWithURL_phAssetIsNilAndImageIsNil() {
+        let url = URL(string: "https://example.com/props.jpg")!
+        let asset = PhotoAsset(imageURL: url)
+        XCTAssertNil(asset.phAsset)
+        XCTAssertNil(asset.image)
+        XCTAssertNotNil(asset.imageURL)
+    }
+
+    // MARK: - ID immutability
+
+    func test_id_doesNotChangeAfterImageReplaced() {
+        let asset = PhotoAsset(image: UIImage(systemName: "star")!)
+        let before = asset.id
+        asset.image = UIImage(systemName: "heart")!
+        XCTAssertEqual(asset.id, before, "id must never change")
+    }
+
+    func test_id_doesNotChangeAfterImageCleared() {
+        let asset = PhotoAsset(image: UIImage(systemName: "star")!)
+        let before = asset.id
+        asset.image = nil
+        XCTAssertEqual(asset.id, before)
+    }
+
+    // MARK: - loadFullImage: pre-loaded called synchronously twice
+
+    func test_loadFullImage_calledTwiceOnPreloadedAsset_firesTwice() {
+        let img = UIImage(systemName: "star")!
+        let asset = PhotoAsset(image: img)
+        var callCount = 0
+        asset.loadFullImage { _ in callCount += 1 }
+        asset.loadFullImage { _ in callCount += 1 }
+        XCTAssertEqual(callCount, 2)
+    }
+
+    // MARK: - loadThumbnail: pre-loaded fires synchronously twice
+
+    func test_loadThumbnail_calledTwiceOnPreloadedAsset_firesTwice() {
+        let img = UIImage(systemName: "star")!
+        let asset = PhotoAsset(image: img)
+        var callCount = 0
+        let size = CGSize(width: 100, height: 100)
+        asset.loadThumbnail(targetSize: size) { _ in callCount += 1 }
+        asset.loadThumbnail(targetSize: size) { _ in callCount += 1 }
+        XCTAssertEqual(callCount, 2)
+    }
+
+    // MARK: - Cache hit sets asset.image
+
+    func test_loadFullImage_cacheHit_setsAssetImage() {
+        let url = URL(string: "https://example.com/sets-image-\(UUID()).jpg")!
+        let img  = UIImage(systemName: "star")!
+        ImageCache.shared[url] = img
+        let asset = PhotoAsset(imageURL: url)
+        XCTAssertNil(asset.image)
+        asset.loadFullImage { _ in }
+        XCTAssertNotNil(asset.image, "Cache hit must set asset.image synchronously")
+        ImageCache.shared[url] = nil
+    }
+
+    // MARK: - cancelPendingLoad is idempotent
+
+    func test_cancelPendingLoad_calledTwice_doesNotCrash() {
+        let url  = URL(string: "https://example.com/cancel-twice-\(UUID()).jpg")!
+        let asset = PhotoAsset(imageURL: url)
+        asset.loadFullImage { _ in }
+        asset.cancelPendingLoad()
+        asset.cancelPendingLoad()   // second cancel — must not crash
+    }
+
+    func test_cancelPendingLoad_beforeAnyLoad_doesNotCrash() {
+        let url  = URL(string: "https://example.com/cancel-before-\(UUID()).jpg")!
+        let asset = PhotoAsset(imageURL: url)
+        asset.cancelPendingLoad()   // nothing pending
+    }
+
+    // MARK: - from(uiImages:) image content
+
+    func test_fromUIImages_firstAssetHasNonNilImage() {
+        let img    = UIImage(systemName: "star")!
+        let assets = PhotoAsset.from(uiImages: [img])
+        XCTAssertNotNil(assets.first?.image)
+    }
+
+    func test_fromUIImages_everyAssetHasUniqueID() {
+        let images = Array(repeating: UIImage(systemName: "star")!, count: 5)
+        let ids = PhotoAsset.from(uiImages: images).map(\.id)
+        XCTAssertEqual(Set(ids).count, 5)
+    }
 }

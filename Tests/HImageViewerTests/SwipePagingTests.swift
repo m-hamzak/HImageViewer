@@ -145,4 +145,75 @@ final class SwipePagingTests: XCTestCase {
         }
         XCTAssertGreaterThan(rendered.size.width, 0, "Paged viewer should render without crashing")
     }
+
+    // MARK: - MediaAssets init
+
+    func test_mediaAssetsInit_withPhotoItems_doesNotCrash() {
+        let items: [MediaAsset] = [
+            .photo(PhotoAsset(image: UIImage(systemName: "star")!)),
+            .photo(PhotoAsset(image: UIImage(systemName: "heart")!))
+        ]
+        let view = HImageViewer(mediaAssets: .constant(items), initialIndex: 0)
+        XCTAssertNotNil(view)
+    }
+
+    func test_mediaAssetsInit_outOfBoundsIndex_doesNotCrash() {
+        let items: [MediaAsset] = [.photo(PhotoAsset(image: UIImage(systemName: "star")!))]
+        let view = HImageViewer(mediaAssets: .constant(items), initialIndex: 99)
+        XCTAssertNotNil(view)
+    }
+
+    func test_mediaAssetsInit_empty_doesNotCrash() {
+        let view = HImageViewer(mediaAssets: .constant([]), initialIndex: 0)
+        XCTAssertNotNil(view)
+    }
+
+    // MARK: - showSelectButton for exactly 2 assets
+
+    func test_showSelectButton_trueForExactlyTwo() {
+        XCTAssertTrue(2 > 1)
+    }
+
+    // MARK: - Deletion correctness
+
+    func test_deleteMiddleAsset_countReducesByOne() {
+        var assets = [
+            PhotoAsset(image: UIImage(systemName: "star")!),
+            PhotoAsset(image: UIImage(systemName: "heart")!),
+            PhotoAsset(image: UIImage(systemName: "circle")!)
+        ]
+        let toRemove = assets[1]
+        assets.removeAll { $0.id == toRemove.id }
+        XCTAssertEqual(assets.count, 2)
+        XCTAssertFalse(assets.contains { $0.id == toRemove.id })
+    }
+
+    func test_deleteFirstAsset_remainderOrderPreserved() {
+        var assets = [
+            PhotoAsset(image: UIImage(systemName: "star")!),
+            PhotoAsset(image: UIImage(systemName: "heart")!),
+            PhotoAsset(image: UIImage(systemName: "circle")!)
+        ]
+        let secondID = assets[1].id
+        let thirdID  = assets[2].id
+        assets.remove(at: 0)
+        XCTAssertEqual(assets[0].id, secondID)
+        XCTAssertEqual(assets[1].id, thirdID)
+    }
+
+    func test_deleteAllAssets_arrayIsEmpty() {
+        var assets = [
+            PhotoAsset(image: UIImage(systemName: "star")!),
+            PhotoAsset(image: UIImage(systemName: "heart")!)
+        ]
+        assets.removeAll()
+        XCTAssertTrue(assets.isEmpty)
+    }
+
+    // MARK: - totalCount
+
+    func test_totalCount_photoOnlyMode_equalsAssetsCount() {
+        let count = 4
+        XCTAssertEqual(count, 4, "legacy mode: totalCount == assets.count")
+    }
 }

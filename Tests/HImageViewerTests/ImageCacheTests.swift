@@ -75,4 +75,55 @@ final class ImageCacheTests: XCTestCase {
         let b = ImageCache.shared
         XCTAssertTrue(a === b, "ImageCache.shared must return the same instance")
     }
+
+    // MARK: - Additional store / retrieve
+
+    func test_storeImage_then_retrieveReturnsNonNil() {
+        let image = UIImage(systemName: "heart")!
+        cache[url1] = image
+        XCTAssertNotNil(cache[url1])
+    }
+
+    func test_removeAll_thenStore_newItemRetrievable() {
+        cache[url1] = UIImage(systemName: "star")!
+        cache.removeAll()
+        let fresh = UIImage(systemName: "heart")!
+        cache[url2] = fresh
+        XCTAssertNil(cache[url1],  "url1 must be nil after removeAll")
+        XCTAssertNotNil(cache[url2], "Newly stored url2 must be retrievable")
+    }
+
+    func test_nilURL_neverCached_removingIsNoOp() {
+        let uncached = URL(string: "https://example.com/never-stored.jpg")!
+        cache[uncached] = nil   // must not crash
+        XCTAssertNil(cache[uncached])
+    }
+
+    func test_manyURLs_individualRemovalDoesNotAffectOthers() {
+        let urls = (0..<5).map { URL(string: "https://example.com/many-\($0).jpg")! }
+        let image = UIImage(systemName: "star")!
+        urls.forEach { cache[$0] = image }
+
+        cache[urls[2]] = nil    // remove middle entry
+
+        XCTAssertNil(cache[urls[2]])
+        for i in [0, 1, 3, 4] {
+            XCTAssertNotNil(cache[urls[i]], "URL \(i) must still be in cache")
+        }
+        urls.forEach { cache[$0] = nil }  // cleanup
+    }
+
+    func test_removeAll_isIdempotent() {
+        cache[url1] = UIImage(systemName: "star")!
+        cache.removeAll()
+        cache.removeAll()   // second call must not crash
+        XCTAssertNil(cache[url1])
+    }
+
+    func test_store_sameURL_twice_secondValueAvailable() {
+        cache[url1] = UIImage(systemName: "star")!
+        cache[url1] = UIImage(systemName: "heart")!
+        // Must still return a non-nil image after second store
+        XCTAssertNotNil(cache[url1])
+    }
 }
