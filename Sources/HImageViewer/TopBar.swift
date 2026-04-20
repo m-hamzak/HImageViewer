@@ -11,22 +11,34 @@ struct TopBar: View {
     let config: TopBarConfig
 
     var body: some View {
-        HStack {
-            if config.selectionMode {
-                Button("Cancel", action: config.onCancelSelection)
+        ZStack {
+            // Centered page counter — sits independently of leading/trailing buttons
+            if let counter = config.pageCounterText {
+                Text(counter)
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(.primary)
-                    .padding(.leading, 4)
-            } else {
-                CircleButton(systemName: "xmark", action: config.onDismiss)
+                    .transition(.opacity)
+                    .animation(.easeInOut(duration: 0.2), value: counter)
             }
-            Spacer()
-            if !config.selectionMode {
-                HStack(spacing: 12) {
-                    if config.showEditButton {
-                        CircleButton(systemName: "pencil", action: config.onEdit)
-                    }
-                    if config.showSelectButton {
-                        CircleButton(systemName: "checkmark.circle", action: config.onSelectToggle)
+
+            // Leading / trailing buttons
+            HStack {
+                if config.selectionMode {
+                    Button("Cancel", action: config.onCancelSelection)
+                        .foregroundStyle(.primary)
+                        .padding(.leading, 4)
+                } else {
+                    CircleButton(systemName: "xmark", action: config.onDismiss)
+                }
+                Spacer()
+                if !config.selectionMode {
+                    HStack(spacing: 12) {
+                        if config.showEditButton {
+                            CircleButton(systemName: "pencil", action: config.onEdit)
+                        }
+                        if config.showSelectButton {
+                            CircleButton(systemName: "checkmark.circle", action: config.onSelectToggle)
+                        }
                     }
                 }
             }
@@ -42,6 +54,8 @@ struct TopBarConfig {
     var showEditButton: Bool
     var showSelectButton: Bool
     var selectionMode: Bool
+    /// Counter text shown centered in the bar, e.g. `"2 / 5"`. `nil` hides the label.
+    var pageCounterText: String?
     var onDismiss: () -> Void
     var onCancelSelection: () -> Void
     var onSelectToggle: () -> Void
