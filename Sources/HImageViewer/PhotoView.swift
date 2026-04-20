@@ -37,21 +37,28 @@ public struct PhotoView: View {
                     ZoomableImageView(image: image)
                         .cornerRadius(12)
                         .id(photo.id)
+                        .accessibilityLabel("Photo")
+                        .accessibilityAddTraits(.isImage)
+                        .accessibilityHint("Double-tap to zoom")
                 } else {
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .cornerRadius(12)
+                        .accessibilityLabel("Photo")
+                        .accessibilityAddTraits(.isImage)
                 }
             } else if didFailToLoad {
                 if let errorView {
                     errorView
+                        .accessibilityLabel("Failed to load photo")
                 } else {
                     defaultErrorView
                 }
             } else {
                 if let placeholderView {
                     placeholderView
+                        .accessibilityLabel("Loading photo")
                 } else {
                     defaultPlaceholderView
                 }
@@ -90,6 +97,7 @@ public struct PhotoView: View {
                 ProgressView()
                     .tint(tintColor)
             )
+            .accessibilityLabel("Loading photo")
     }
 
     private var defaultErrorView: some View {
@@ -99,5 +107,6 @@ public struct PhotoView: View {
                     .foregroundColor(.red)
                     .font(.largeTitle)
             )
+            .accessibilityLabel("Failed to load photo")
     }
 }

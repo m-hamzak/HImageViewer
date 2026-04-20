@@ -98,6 +98,12 @@ public struct HImageViewer: View {
         return "\(currentIndex + 1) / \(totalCount)"
     }
 
+    /// Natural-language equivalent of `pageCounterText` for VoiceOver, e.g. `"Page 2 of 5"`.
+    private var accessibilityPageCounterText: String? {
+        guard totalCount > 1, !selectionMode else { return nil }
+        return "Page \(currentIndex + 1) of \(totalCount)"
+    }
+
     /// 0→1 progress of the drag towards the dismiss threshold.
     private var dragProgress: Double {
         min(Double(max(0, dragOffset)) / Double(dismissThreshold), 1.0)
@@ -229,6 +235,7 @@ public struct HImageViewer: View {
                 showSelectButton: totalCount > 1,
                 selectionMode: selectionMode,
                 pageCounterText: pageCounterText,
+                accessibilityPageLabel: accessibilityPageCounterText,
                 tintColor: config.resolvedTintColor,
                 isGlassMode: config.isGlassMode,
                 onDismiss: { dismiss(); delegate?.didTapCloseButton() },

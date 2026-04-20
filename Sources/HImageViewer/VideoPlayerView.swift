@@ -28,6 +28,8 @@ struct VideoPlayerView: View {
             .aspectRatio(16 / 9, contentMode: .fit)
             .cornerRadius(12)
             .shadow(radius: 4)
+            .accessibilityLabel("Video player")
+            .accessibilityHint("Use the controls to play or pause")
             .onAppear {
                 let item = AVPlayerItem(url: videoURL)
                 playerHolder.player.replaceCurrentItem(with: item)
