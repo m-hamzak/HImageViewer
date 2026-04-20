@@ -182,6 +182,9 @@ public struct HImageViewer: View {
 
     public var body: some View {
         ZStack {
+            // Pure black canvas — fills behind the status bar too.
+            Color.black.ignoresSafeArea()
+
             mainComponent
                 .offset(y: max(0, dragOffset))
                 .opacity(1 - dragProgress * 0.35)
@@ -211,6 +214,10 @@ public struct HImageViewer: View {
                 .transition(.opacity)
             }
         }
+        // In glass mode, force dark appearance so materials render as dark frosted glass
+        // and white icons/text are always legible against the black canvas.
+        // In classic (tinted) mode, follow the system color scheme.
+        .preferredColorScheme(config.isGlassMode ? .dark : nil)
     }
 
     // MARK: - Subviews
@@ -222,6 +229,8 @@ public struct HImageViewer: View {
                 showSelectButton: totalCount > 1,
                 selectionMode: selectionMode,
                 pageCounterText: pageCounterText,
+                tintColor: config.resolvedTintColor,
+                isGlassMode: config.isGlassMode,
                 onDismiss: { dismiss(); delegate?.didTapCloseButton() },
                 onCancelSelection: {
                     selectionMode = false
@@ -246,7 +255,7 @@ public struct HImageViewer: View {
                         selectionMode: selectionMode,
                         onSelectToggle: handleSelection
                     )
-                    .background(Color(UIColor.systemBackground))
+                    .background(.regularMaterial)
                     .transition(.opacity)
                 }
             }
@@ -262,6 +271,8 @@ public struct HImageViewer: View {
                 showSaveButton: shouldShowSaveButton,
                 showCommentBox: config.showCommentBox,
                 title: config.title,
+                tintColor: config.resolvedTintColor,
+                isGlassMode: config.isGlassMode,
                 onSave: { handleSave() },
                 onDelete: { handleDelete() }
             ))
@@ -330,8 +341,14 @@ public struct HImageViewer: View {
                         Group {
                             switch item.kind {
                             case .photo(let asset):
-                                PhotoView(photo: asset, isSinglePhotoMode: true)
-                                    .padding(.horizontal)
+                                PhotoView(
+                                    photo: asset,
+                                    isSinglePhotoMode: true,
+                                    tintColor: config.resolvedTintColor,
+                                    placeholderView: config.placeholderView,
+                                    errorView: config.errorView
+                                )
+                                .padding(.horizontal)
                             case .video(let url):
                                 VideoPlayerView(videoURL: url)
                                     .padding()
@@ -348,9 +365,15 @@ public struct HImageViewer: View {
         } else if !assets.isEmpty {
             TabView(selection: $currentIndex) {
                 ForEach(Array(assets.enumerated()), id: \.1.id) { index, asset in
-                    PhotoView(photo: asset, isSinglePhotoMode: true)
-                        .padding(.horizontal)
-                        .tag(index)
+                    PhotoView(
+                        photo: asset,
+                        isSinglePhotoMode: true,
+                        tintColor: config.resolvedTintColor,
+                        placeholderView: config.placeholderView,
+                        errorView: config.errorView
+                    )
+                    .padding(.horizontal)
+                    .tag(index)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))

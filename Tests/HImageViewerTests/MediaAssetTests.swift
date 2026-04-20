@@ -148,4 +148,92 @@ final class MediaAssetTests: XCTestCase {
         let uniqueIDs = Set(assets.map(\.id))
         XCTAssertEqual(uniqueIDs.count, assets.count, "Each asset must have a unique id")
     }
+
+    // MARK: - Explicit ID
+
+    func test_explicitID_isPreserved() {
+        let id = UUID()
+        let asset = MediaAsset(id: id, kind: .video(sampleURL))
+        XCTAssertEqual(asset.id, id)
+    }
+
+    // MARK: - Kind matching
+
+    func test_photo_kindContainsCorrectAsset() {
+        let pa = PhotoAsset(image: sampleImage)
+        let ma = MediaAsset.photo(pa)
+        guard case .photo(let inner) = ma.kind else {
+            XCTFail("Expected .photo kind"); return
+        }
+        XCTAssertEqual(inner, pa)
+    }
+
+    func test_video_kindContainsCorrectURL() {
+        let ma = MediaAsset.video(sampleURL)
+        guard case .video(let inner) = ma.kind else {
+            XCTFail("Expected .video kind"); return
+        }
+        XCTAssertEqual(inner, sampleURL)
+    }
+
+    // MARK: - Factory preserves identity
+
+    func test_fromPhotoAssets_preservesPhotoAssetID() {
+        let pa = PhotoAsset(image: sampleImage)
+        let ma = MediaAsset.from(photoAssets: [pa])
+        XCTAssertEqual(ma.first?.photoAsset?.id, pa.id)
+    }
+
+    func test_fromVideoURLs_storesCorrectURLs() {
+        let u1 = URL(string: "https://example.com/a.mp4")!
+        let u2 = URL(string: "https://example.com/b.mp4")!
+        let assets = MediaAsset.from(videoURLs: [u1, u2])
+        XCTAssertEqual(assets[0].videoURL, u1)
+        XCTAssertEqual(assets[1].videoURL, u2)
+    }
+
+    // MARK: - Mixed array
+
+    func test_mixedArray_kindsAreCorrect() {
+        let photo = MediaAsset.photo(PhotoAsset(image: sampleImage))
+        let video = MediaAsset.video(sampleURL)
+        XCTAssertTrue(photo.isPhoto && !photo.isVideo)
+        XCTAssertTrue(video.isVideo && !video.isPhoto)
+    }
+
+    // MARK: - Equatable edge cases
+
+    func test_equatable_sameIDDifferentKinds_areEqual() {
+        let sharedID = UUID()
+        let p = MediaAsset(id: sharedID, kind: .photo(PhotoAsset(image: sampleImage)))
+        let v = MediaAsset(id: sharedID, kind: .video(sampleURL))
+        XCTAssertEqual(p, v, "Same id means equal regardless of kind")
+    }
+
+    func test_equatable_differentIDs_sameKind_areNotEqual() {
+        let a = MediaAsset.video(sampleURL)
+        let b = MediaAsset.video(sampleURL)
+        XCTAssertNotEqual(a, b, "Different ids mean not equal even if kind is identical")
+    }
+
+    // MARK: - from(photoAssets:) count
+
+    func test_fromPhotoAssets_emptyInput_returnsEmpty() {
+        XCTAssertTrue(MediaAsset.from(photoAssets: []).isEmpty)
+    }
+
+    func test_fromPhotoAssets_singleItem_returnsOne() {
+        let result = MediaAsset.from(photoAssets: [PhotoAsset(image: sampleImage)])
+        XCTAssertEqual(result.count, 1)
+    }
+
+    // MARK: - isPhoto / isVideo cross-checks
+
+    func test_photo_isVideoReturnsFalse() {
+        XCTAssertFalse(MediaAsset.photo(PhotoAsset(image: sampleImage)).isVideo)
+    }
+
+    func test_video_isPhotoReturnsFalse() {
+        XCTAssertFalse(MediaAsset.video(sampleURL).isPhoto)
+    }
 }

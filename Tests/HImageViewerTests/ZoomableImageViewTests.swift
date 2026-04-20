@@ -142,4 +142,102 @@ final class ZoomableImageViewTests: XCTestCase {
         XCTAssertGreaterThan(rendered.size.width, 0)
         XCTAssertGreaterThan(rendered.size.height, 0)
     }
+
+    // MARK: - zoomClamp additional
+
+    func test_zoomClamp_slightlyAboveMin_unchanged() {
+        let above = ZoomDefaults.minScale + 0.1
+        XCTAssertEqual(zoomClamp(above), above, accuracy: 0.001)
+    }
+
+    func test_zoomClamp_slightlyBelowMax_unchanged() {
+        let below = ZoomDefaults.maxScale - 0.1
+        XCTAssertEqual(zoomClamp(below), below, accuracy: 0.001)
+    }
+
+    func test_zoomClamp_negativeValue_clampsToMin() {
+        XCTAssertEqual(zoomClamp(-5.0), ZoomDefaults.minScale)
+    }
+
+    func test_zoomClamp_zero_clampsToMin() {
+        XCTAssertEqual(zoomClamp(0), ZoomDefaults.minScale)
+    }
+
+    func test_zoomClamp_veryLarge_clampsToMax() {
+        XCTAssertEqual(zoomClamp(1_000_000), ZoomDefaults.maxScale)
+    }
+
+    // MARK: - zoomToggle additional
+
+    func test_zoomToggle_slightlyAboveMin_returnsMin() {
+        let slightly = ZoomDefaults.minScale + 0.01
+        XCTAssertEqual(zoomToggle(current: slightly), ZoomDefaults.minScale)
+    }
+
+    func test_zoomToggle_atMaxScale_returnsMinScale() {
+        XCTAssertEqual(zoomToggle(current: ZoomDefaults.maxScale), ZoomDefaults.minScale)
+    }
+
+    func test_zoomToggle_customTapTarget_zoomedIn_returnsMin() {
+        let result = zoomToggle(current: 3.0, tapTarget: 2.0)
+        XCTAssertEqual(result, ZoomDefaults.minScale)
+    }
+
+    func test_zoomToggle_threeRounds_correctCycle() {
+        let t1 = zoomToggle(current: ZoomDefaults.minScale)   // → doubleTapScale
+        let t2 = zoomToggle(current: t1)                       // → minScale
+        let t3 = zoomToggle(current: t2)                       // → doubleTapScale
+        XCTAssertEqual(t1, ZoomDefaults.doubleTapScale)
+        XCTAssertEqual(t2, ZoomDefaults.minScale)
+        XCTAssertEqual(t3, ZoomDefaults.doubleTapScale)
+    }
+
+    // MARK: - panClamp additional
+
+    func test_panClamp_exactlyAtMaxOffset_returnsUnchanged() {
+        let container = CGSize(width: 300, height: 600)
+        let scale: CGFloat = 2.0
+        let maxX = container.width  * (scale - 1) / 2  // 150
+        let maxY = container.height * (scale - 1) / 2  // 300
+        let result = panClamp(CGSize(width: maxX, height: maxY), scale: scale, in: container)
+        XCTAssertEqual(result.width,  maxX, accuracy: 0.001)
+        XCTAssertEqual(result.height, maxY, accuracy: 0.001)
+    }
+
+    func test_panClamp_zeroOffset_alwaysZero() {
+        let result = panClamp(.zero, scale: 3.0, in: CGSize(width: 400, height: 800))
+        XCTAssertEqual(result.width, 0)
+        XCTAssertEqual(result.height, 0)
+    }
+
+    func test_panClamp_scaleJustAboveOne_allowsTinyOffset() {
+        let container = CGSize(width: 300, height: 600)
+        let result = panClamp(CGSize(width: 999, height: 999), scale: 1.1, in: container)
+        XCTAssertGreaterThan(result.width, 0)
+        XCTAssertGreaterThan(result.height, 0)
+        XCTAssertLessThan(result.width, 20)  // tiny, not full 999
+    }
+
+    func test_panClamp_symmetricPositiveNegative() {
+        let container = CGSize(width: 300, height: 600)
+        let scale: CGFloat = 2.0
+        let pos = panClamp(CGSize(width: 200, height: 400), scale: scale, in: container)
+        let neg = panClamp(CGSize(width: -200, height: -400), scale: scale, in: container)
+        XCTAssertEqual(pos.width,  -neg.width,  accuracy: 0.001, "Pan bounds must be symmetric")
+        XCTAssertEqual(pos.height, -neg.height, accuracy: 0.001)
+    }
+
+    // MARK: - Constants additional
+
+    func test_minScale_isExactlyOne() {
+        XCTAssertEqual(ZoomDefaults.minScale, 1.0, "minScale must be 1.0 (native pixel size)")
+    }
+
+    func test_doubleTapScale_isGreaterThanOne() {
+        XCTAssertGreaterThan(ZoomDefaults.doubleTapScale, 1.0)
+    }
+
+    func test_maxScale_isAtLeastTwo() {
+        XCTAssertGreaterThanOrEqual(ZoomDefaults.maxScale, 2.0, "maxScale should allow at least 2× zoom")
+    }
 }

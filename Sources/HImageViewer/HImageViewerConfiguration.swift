@@ -5,9 +5,12 @@
 //  Created by Hamza Khalid on 08/07/2025.
 //
 
+import SwiftUI
+
 /// Configuration object for customizing `HImageViewer` behavior and appearance.
 ///
-/// Use this struct to configure the viewer's UI elements, delegate callbacks, and upload progress tracking.
+/// Use this struct to configure the viewer's UI elements, delegate callbacks, upload progress
+/// tracking, and visual theming.
 ///
 /// ## Example
 /// ```swift
@@ -17,19 +20,25 @@
 ///     showCommentBox: true,
 ///     showSaveButton: true,
 ///     showEditButton: false,
-///     title: "Photo Gallery"
+///     title: "Photo Gallery",
+///     tintColor: .purple,
+///     placeholderView: AnyView(MyLoadingView()),
+///     errorView: AnyView(MyErrorView())
 /// )
 ///
 /// HImageViewer(assets: $assets, selectedVideo: $video, configuration: config)
 /// ```
 public struct HImageViewerConfiguration {
+
+    // MARK: - Content
+
     /// Initial text to pre-fill in the comment box when `showCommentBox` is enabled.
     public let initialComment: String?
 
     /// Delegate to receive callbacks for user interactions (save, close, edit).
     ///
-    /// - Important: Do not retain this configuration object long-term. Pass it directly to `HImageViewer`
-    ///   to avoid potential retain cycles. The viewer extracts and stores the delegate with a weak reference.
+    /// - Important: Do not retain this configuration object long-term. Pass it directly to
+    ///   `HImageViewer` to avoid potential retain cycles. The viewer stores the delegate weakly.
     public let delegate: HImageViewerControlDelegate?
 
     /// Whether to show an editable comment text field. If `false`, displays static `title` instead.
@@ -46,9 +55,67 @@ public struct HImageViewerConfiguration {
 
     /// Shared upload state object for tracking and displaying upload progress.
     ///
-    /// Pass a shared `HImageViewerUploadState` instance and update its `progress` property (0.0-1.0)
-    /// from your upload code. The viewer will automatically show/hide a progress overlay.
+    /// Pass a shared `HImageViewerUploadState` instance and update its `progress` property
+    /// (0.0–1.0) from your upload code. The viewer automatically shows/hides a progress overlay.
     public let uploadState: HImageViewerUploadState?
+
+    // MARK: - Theming
+
+    /// The accent color applied to interactive elements: buttons, icons, and the loading spinner.
+    ///
+    /// - When `nil` (default): the viewer uses the native iOS 26 Liquid Glass theme — a dark,
+    ///   immersive look with frosted-glass buttons and bars.
+    /// - When set to any `Color`: the viewer switches to a classic bordered style using that
+    ///   color as the accent (button icons, action button, text cursor).
+    ///
+    /// ```swift
+    /// // Glass theme (default)
+    /// HImageViewerConfiguration()
+    ///
+    /// // Classic themed style
+    /// HImageViewerConfiguration(tintColor: .purple)
+    /// ```
+    public let tintColor: Color?
+
+    /// A custom view displayed while a photo is loading.
+    ///
+    /// When `nil` (default), the viewer shows a gray background with a system `ProgressView`.
+    /// Provide any `AnyView` to completely replace the built-in placeholder.
+    ///
+    /// ```swift
+    /// placeholderView: AnyView(
+    ///     VStack {
+    ///         ProgressView()
+    ///         Text("Loading…").font(.caption)
+    ///     }
+    /// )
+    /// ```
+    public let placeholderView: AnyView?
+
+    /// A custom view displayed when a photo fails to load.
+    ///
+    /// When `nil` (default), the viewer shows a red background with a warning triangle icon.
+    /// Provide any `AnyView` to completely replace the built-in error state.
+    ///
+    /// ```swift
+    /// errorView: AnyView(
+    ///     Image(systemName: "photo.badge.exclamationmark")
+    ///         .font(.largeTitle)
+    ///         .foregroundColor(.secondary)
+    /// )
+    /// ```
+    public let errorView: AnyView?
+
+    // MARK: - Derived helpers
+
+    /// `true` when the viewer should use the iOS 26 Liquid Glass theme.
+    /// `false` when a custom `tintColor` was supplied, enabling the classic bordered style.
+    public var isGlassMode: Bool { tintColor == nil }
+
+    /// The effective accent color. Returns the provided `tintColor`, or `.blue` when in glass mode.
+    public var resolvedTintColor: Color { tintColor ?? .blue }
+
+    // MARK: - Initialisation
 
     /// Creates a new configuration with the specified options.
     ///
@@ -60,6 +127,9 @@ public struct HImageViewerConfiguration {
     ///   - showEditButton: Show Edit button in single photo mode (default: `true`)
     ///   - title: Static title when comment box is hidden (default: `nil`)
     ///   - uploadState: Shared upload progress tracker (default: `nil`)
+    ///   - tintColor: Accent color. `nil` (default) = Liquid Glass theme. Any `Color` = classic bordered style.
+    ///   - placeholderView: Custom view shown while an image loads (default: `nil`)
+    ///   - errorView: Custom view shown when an image fails to load (default: `nil`)
     public init(
         initialComment: String? = nil,
         delegate: HImageViewerControlDelegate? = nil,
@@ -67,7 +137,10 @@ public struct HImageViewerConfiguration {
         showSaveButton: Bool = true,
         showEditButton: Bool = true,
         title: String? = nil,
-        uploadState: HImageViewerUploadState? = nil
+        uploadState: HImageViewerUploadState? = nil,
+        tintColor: Color? = nil,
+        placeholderView: AnyView? = nil,
+        errorView: AnyView? = nil
     ) {
         self.initialComment = initialComment
         self.delegate = delegate
@@ -76,5 +149,8 @@ public struct HImageViewerConfiguration {
         self.showEditButton = showEditButton
         self.title = title
         self.uploadState = uploadState
+        self.tintColor = tintColor
+        self.placeholderView = placeholderView
+        self.errorView = errorView
     }
 }

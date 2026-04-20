@@ -125,4 +125,57 @@ final class ViewRenderingTests: XCTestCase {
 
         XCTAssertGreaterThan(image.size.width, 0, "MediaAsset-based viewer should render successfully")
     }
+
+    func test_hImageViewer_withTintColor_renders() {
+        let assets = [PhotoAsset(image: UIImage(systemName: "star")!)]
+        let config = HImageViewerConfiguration(tintColor: .purple)
+        let view = HImageViewer(
+            assets: .constant(assets),
+            selectedVideo: .constant(nil),
+            configuration: config
+        )
+        let image = renderView(view)
+        XCTAssertGreaterThan(image.size.width, 0, "Tinted (classic) viewer must render")
+    }
+
+    func test_hImageViewer_emptyAssets_renders() {
+        let view = HImageViewer(
+            assets: .constant([]),
+            selectedVideo: .constant(nil)
+        )
+        let image = renderView(view)
+        XCTAssertGreaterThan(image.size.width, 0, "Viewer with empty assets must not crash")
+    }
+
+    func test_progressRingOverlayView_atZeroPercent_renders() {
+        let view = ProgressRingOverlayView(progress: 0.0, title: nil)
+        let image = renderView(view, size: CGSize(width: 100, height: 100))
+        XCTAssertGreaterThan(image.size.width, 0)
+    }
+
+    func test_progressRingOverlayView_atComplete_renders() {
+        let view = ProgressRingOverlayView(progress: 1.0, title: "Done")
+        let image = renderView(view, size: CGSize(width: 100, height: 100))
+        XCTAssertGreaterThan(image.size.width, 0)
+    }
+
+    func test_hImageViewer_mediaAssets_withVideoPlaceholder_renders() {
+        let items: [MediaAsset] = [
+            .photo(PhotoAsset(image: UIImage(systemName: "star")!)),
+            .video(URL(string: "https://example.com/test.mp4")!)
+        ]
+        let view = HImageViewer(mediaAssets: .constant(items))
+        let image = renderView(view)
+        XCTAssertGreaterThan(image.size.width, 0, "Mixed media viewer must render without crashing")
+    }
+
+    func test_topBar_inSelectionMode_renders() {
+        let config = TopBarConfig(
+            showEditButton: false, showSelectButton: false,
+            selectionMode: true, pageCounterText: nil,
+            onDismiss: {}, onCancelSelection: {}, onSelectToggle: {}, onEdit: {}
+        )
+        let image = renderView(TopBar(config: config), size: CGSize(width: 375, height: 56))
+        XCTAssertGreaterThan(image.size.width, 0)
+    }
 }

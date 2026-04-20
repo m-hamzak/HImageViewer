@@ -113,6 +113,98 @@ final class DragToDismissTests: XCTestCase {
         let shouldActivate = progress == nil
         XCTAssertTrue(shouldActivate, "Gesture must be active when no upload is in progress")
     }
+
+    // MARK: - dragProgress additional
+
+    func test_dragProgress_quarterThreshold() {
+        XCTAssertEqual(dragProgress(offset: 30, threshold: 120), 0.25, accuracy: 0.001)
+    }
+
+    func test_dragProgress_threeQuartersThreshold() {
+        XCTAssertEqual(dragProgress(offset: 90, threshold: 120), 0.75, accuracy: 0.001)
+    }
+
+    func test_dragProgress_veryLargeOffset_clampsToOne() {
+        XCTAssertEqual(dragProgress(offset: 1_000_000, threshold: 120), 1.0)
+    }
+
+    func test_dragProgress_slightlyBelowThreshold_lessThanOne() {
+        let progress = dragProgress(offset: 119, threshold: 120)
+        XCTAssertLessThan(progress, 1.0)
+        XCTAssertGreaterThan(progress, 0.9)
+    }
+
+    func test_dragProgress_oneUnit_isCorrectFraction() {
+        XCTAssertEqual(dragProgress(offset: 1, threshold: 100), 0.01, accuracy: 0.0001)
+    }
+
+    // MARK: - shouldDismiss additional
+
+    func test_shouldDismiss_bothBelowThreshold_isFalse() {
+        XCTAssertFalse(shouldDismiss(raw: 50, predicted: 80, threshold: 120))
+    }
+
+    func test_shouldDismiss_predictedExactlyAtThreshold_isFalse() {
+        // Condition is `predicted > threshold` (strict), so == is NOT enough
+        XCTAssertFalse(shouldDismiss(raw: 0, predicted: 120, threshold: 120))
+    }
+
+    func test_shouldDismiss_predictedOneAboveThreshold_isTrue() {
+        XCTAssertTrue(shouldDismiss(raw: 0, predicted: 121, threshold: 120))
+    }
+
+    func test_shouldDismiss_rawExactlyAtThreshold_isTrue() {
+        XCTAssertTrue(shouldDismiss(raw: 120, predicted: 0, threshold: 120))
+    }
+
+    func test_shouldDismiss_slowCarefulDrag_notDismissed() {
+        XCTAssertFalse(shouldDismiss(raw: 50, predicted: 60, threshold: 120))
+    }
+
+    func test_shouldDismiss_veryFastFlick_dismissed() {
+        XCTAssertTrue(shouldDismiss(raw: 10, predicted: 500, threshold: 120))
+    }
+
+    // MARK: - Direction filter additional
+
+    func test_directionFilter_exactlyAt1_5xRatio_doesNotActivate() {
+        // y must be STRICTLY > x * 1.5
+        XCTAssertFalse(isDominantlyDownward(x: 40, y: 60))  // 60 == 40*1.5
+    }
+
+    func test_directionFilter_oneAbove1_5xRatio_activates() {
+        XCTAssertTrue(isDominantlyDownward(x: 40, y: 61))   // 61 > 40*1.5
+    }
+
+    func test_directionFilter_nearlyVertical_activates() {
+        XCTAssertTrue(isDominantlyDownward(x: 1, y: 100))
+    }
+
+    func test_directionFilter_upwardDiagonal_doesNotActivate() {
+        XCTAssertFalse(isDominantlyDownward(x: 10, y: -50))
+    }
+
+    func test_directionFilter_zeroBothAxes_doesNotActivate() {
+        XCTAssertFalse(isDominantlyDownward(x: 0, y: 0))
+    }
+
+    // MARK: - Upload suppression edge cases
+
+    func test_gestureDisabled_uploadJustStarted() {
+        let progress: Double? = 0.01
+        XCTAssertFalse(progress == nil, "Gesture must be suppressed the instant upload starts")
+    }
+
+    func test_gestureDisabled_uploadComplete_progressNotYetCleared() {
+        // progress = 1.0 — upload done but not cleared yet (300ms fade animation)
+        let progress: Double? = 1.0
+        XCTAssertFalse(progress == nil, "Gesture must remain suppressed until progress is set to nil")
+    }
+
+    func test_gestureEnabled_afterProgressCleared() {
+        let progress: Double? = nil
+        XCTAssertTrue(progress == nil, "Gesture re-enables once progress is explicitly set to nil")
+    }
 }
 
 // MARK: - Pure helpers (replicate HImageViewer logic for isolation)

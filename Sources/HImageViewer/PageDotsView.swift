@@ -25,7 +25,7 @@ struct PageDotsView: View {
                 ForEach(0..<count, id: \.self) { index in
                     let isActive = index == currentIndex
                     Circle()
-                        .fill(isActive ? Color.primary : Color.secondary.opacity(0.35))
+                        .fill(isActive ? Color.white : Color.white.opacity(0.35))
                         .frame(
                             width: isActive ? 8 : 6,
                             height: isActive ? 8 : 6

@@ -12,39 +12,58 @@ struct TopBar: View {
 
     var body: some View {
         ZStack {
-            // Centered page counter — sits independently of leading/trailing buttons
+            // Centered page counter
             if let counter = config.pageCounterText {
                 Text(counter)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.primary)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(config.isGlassMode ? .white : .primary)
                     .transition(.opacity)
                     .animation(.easeInOut(duration: 0.2), value: counter)
             }
 
-            // Leading / trailing buttons
+            // Leading / trailing controls
             HStack {
                 if config.selectionMode {
                     Button("Cancel", action: config.onCancelSelection)
-                        .foregroundStyle(.primary)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(config.isGlassMode ? .white : config.tintColor)
                         .padding(.leading, 4)
                 } else {
-                    CircleButton(systemName: "xmark", action: config.onDismiss)
+                    CircleButton(
+                        systemName: "xmark",
+                        tintColor: config.tintColor,
+                        isGlassMode: config.isGlassMode,
+                        action: config.onDismiss
+                    )
                 }
+
                 Spacer()
+
                 if !config.selectionMode {
-                    HStack(spacing: 12) {
+                    HStack(spacing: 10) {
                         if config.showEditButton {
-                            CircleButton(systemName: "pencil", action: config.onEdit)
+                            CircleButton(
+                                systemName: "pencil",
+                                tintColor: config.tintColor,
+                                isGlassMode: config.isGlassMode,
+                                action: config.onEdit
+                            )
                         }
                         if config.showSelectButton {
-                            CircleButton(systemName: "checkmark.circle", action: config.onSelectToggle)
+                            CircleButton(
+                                systemName: "checkmark.circle",
+                                tintColor: config.tintColor,
+                                isGlassMode: config.isGlassMode,
+                                action: config.onSelectToggle
+                            )
                         }
                     }
                 }
             }
         }
-        .padding(.horizontal)
+        .padding(.horizontal, 16)
         .padding(.top, 12)
+        .padding(.bottom, 8)
     }
 }
 
@@ -56,27 +75,49 @@ struct TopBarConfig {
     var selectionMode: Bool
     /// Counter text shown centered in the bar, e.g. `"2 / 5"`. `nil` hides the label.
     var pageCounterText: String?
+    /// Accent color for buttons. Used in classic (non-glass) mode.
+    var tintColor: Color = .blue
+    /// `true` = iOS 26 Liquid Glass style; `false` = classic bordered style.
+    var isGlassMode: Bool = true
     var onDismiss: () -> Void
     var onCancelSelection: () -> Void
     var onSelectToggle: () -> Void
     var onEdit: () -> Void
 }
 
+// MARK: - CircleButton
+
 struct CircleButton: View {
     let systemName: String
+    var tintColor: Color = .blue
+    var isGlassMode: Bool = true
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.headline)
-                .foregroundStyle(.gray)
-                .padding(8)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(isGlassMode ? .white : tintColor)
+                .frame(width: 36, height: 36)
         }
-        .background(
-            Circle()
-                .stroke(Color.gray, lineWidth: 1)
-        )
+        .modifier(CircleButtonBackground(tintColor: tintColor, isGlassMode: isGlassMode))
+    }
+}
 
+/// Applies either the iOS 26 glass circle or the classic gray-border circle.
+private struct CircleButtonBackground: ViewModifier {
+    let tintColor: Color
+    let isGlassMode: Bool
+
+    func body(content: Content) -> some View {
+        if isGlassMode {
+            content.glassCircle()
+        } else {
+            content
+                .background(
+                    Circle()
+                        .stroke(Color.gray, lineWidth: 1)
+                )
+        }
     }
 }
