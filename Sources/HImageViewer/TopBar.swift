@@ -114,7 +114,20 @@ struct CircleButton: View {
         }
         .modifier(CircleButtonBackground(tintColor: tintColor, isGlassMode: isGlassMode))
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint(accessibilityHint ?? "")
+        .modifier(OptionalHintModifier(hint: accessibilityHint))
+    }
+}
+
+/// Applies `.accessibilityHint` only when a non-nil hint is provided,
+/// preventing VoiceOver from announcing an empty hint string.
+private struct OptionalHintModifier: ViewModifier {
+    let hint: String?
+    func body(content: Content) -> some View {
+        if let hint {
+            content.accessibilityHint(hint)
+        } else {
+            content
+        }
     }
 }
 

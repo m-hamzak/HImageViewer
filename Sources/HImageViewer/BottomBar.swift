@@ -101,7 +101,7 @@ struct BottomBar: View {
     @ViewBuilder
     private var classicTextSection: some View {
         if config.showCommentBox {
-            TextField("Add a comment...", text: $comment)
+            TextField("Add a comment…", text: $comment)
                 .textFieldStyle(.roundedBorder)
                 .padding([.horizontal, .bottom])
                 .frame(minHeight: 50)

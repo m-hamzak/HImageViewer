@@ -21,8 +21,21 @@ protocol HapticFeedbackProviding {
 // MARK: - Real implementation
 
 /// Default implementation that drives `UIImpactFeedbackGenerator`.
+///
+/// Generators are created once per style and reused across calls, avoiding
+/// repeated allocation and allowing the Taptic Engine to stay primed.
 final class HapticFeedbackProvider: HapticFeedbackProviding {
+
+    private let light  = UIImpactFeedbackGenerator(style: .light)
+    private let medium = UIImpactFeedbackGenerator(style: .medium)
+    private let heavy  = UIImpactFeedbackGenerator(style: .heavy)
+
     func impact(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
-        UIImpactFeedbackGenerator(style: style).impactOccurred()
+        switch style {
+        case .light:              light.impactOccurred()
+        case .medium:             medium.impactOccurred()
+        case .heavy:              heavy.impactOccurred()
+        @unknown default:         UIImpactFeedbackGenerator(style: style).impactOccurred()
+        }
     }
 }

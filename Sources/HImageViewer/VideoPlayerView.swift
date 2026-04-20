@@ -31,6 +31,9 @@ struct VideoPlayerView: View {
             .accessibilityLabel("Video player")
             .accessibilityHint("Use the controls to play or pause")
             .onAppear {
+                // Skip recreation if the player is already configured for this URL
+                // (prevents redundant AVPlayerItem allocation on re-appear).
+                guard (playerHolder.player.currentItem?.asset as? AVURLAsset)?.url != videoURL else { return }
                 let item = AVPlayerItem(url: videoURL)
                 playerHolder.player.replaceCurrentItem(with: item)
                 // Seek to beginning but do NOT autoplay — user controls playback.
