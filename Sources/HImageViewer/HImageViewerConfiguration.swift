@@ -61,6 +61,21 @@ public struct HImageViewerConfiguration {
 
     // MARK: - Theming
 
+    /// The canvas color drawn behind the photo/video content.
+    ///
+    /// Defaults to `Color(.systemBackground)` so the viewer feels at home in both
+    /// light mode (white canvas) and dark mode (black canvas) without any extra
+    /// configuration. Pass any `Color` to override:
+    ///
+    /// ```swift
+    /// // Always black (classic photo-viewer look)
+    /// HImageViewerConfiguration(backgroundColor: .black)
+    ///
+    /// // Match your app's surface color
+    /// HImageViewerConfiguration(backgroundColor: Color("AppBackground"))
+    /// ```
+    public let backgroundColor: Color
+
     /// The accent color applied to interactive elements: buttons, icons, and the loading spinner.
     ///
     /// - When `nil` (default): the viewer uses the native iOS 26 Liquid Glass theme — a dark,
@@ -112,8 +127,10 @@ public struct HImageViewerConfiguration {
     /// `false` when a custom `tintColor` was supplied, enabling the classic bordered style.
     public var isGlassMode: Bool { tintColor == nil }
 
-    /// The effective accent color. Returns the provided `tintColor`, or `.blue` when in glass mode.
-    public var resolvedTintColor: Color { tintColor ?? .blue }
+    /// The effective accent color. Returns the provided `tintColor`, or the host app's
+    /// global accent color when none is set — so the viewer automatically matches the
+    /// developer's app theme without any extra configuration.
+    public var resolvedTintColor: Color { tintColor ?? .accentColor }
 
     // MARK: - Initialisation
 
@@ -127,6 +144,8 @@ public struct HImageViewerConfiguration {
     ///   - showEditButton: Show Edit button in single photo mode (default: `true`)
     ///   - title: Static title when comment box is hidden (default: `nil`)
     ///   - uploadState: Shared upload progress tracker (default: `nil`)
+    ///   - backgroundColor: Canvas color behind content. Defaults to `Color(.systemBackground)`
+    ///     so the viewer adapts to light/dark mode automatically.
     ///   - tintColor: Accent color. `nil` (default) = Liquid Glass theme. Any `Color` = classic bordered style.
     ///   - placeholderView: Custom view shown while an image loads (default: `nil`)
     ///   - errorView: Custom view shown when an image fails to load (default: `nil`)
@@ -138,6 +157,7 @@ public struct HImageViewerConfiguration {
         showEditButton: Bool = true,
         title: String? = nil,
         uploadState: HImageViewerUploadState? = nil,
+        backgroundColor: Color = Color(.systemBackground),
         tintColor: Color? = nil,
         placeholderView: AnyView? = nil,
         errorView: AnyView? = nil
@@ -149,6 +169,7 @@ public struct HImageViewerConfiguration {
         self.showEditButton = showEditButton
         self.title = title
         self.uploadState = uploadState
+        self.backgroundColor = backgroundColor
         self.tintColor = tintColor
         self.placeholderView = placeholderView
         self.errorView = errorView

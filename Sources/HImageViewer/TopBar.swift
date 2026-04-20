@@ -16,7 +16,7 @@ struct TopBar: View {
             if let counter = config.pageCounterText {
                 Text(counter)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(config.isGlassMode ? .white : .primary)
+                    .foregroundStyle(.primary)
                     .transition(.opacity)
                     .animation(.easeInOut(duration: 0.2), value: counter)
                     .accessibilityLabel(config.accessibilityPageLabel ?? counter)
@@ -27,10 +27,10 @@ struct TopBar: View {
                 if config.selectionMode {
                     Button("Cancel", action: config.onCancelSelection)
                         .font(.body.weight(.medium))
-                        .foregroundStyle(config.isGlassMode ? .white : config.tintColor)
+                        .foregroundStyle(config.isGlassMode ? Color(.label) : config.tintColor)
                         .padding(.leading, 4)
                         .accessibilityHint("Exits selection mode")
-                } else {
+                } else if config.showCloseButton {
                     CircleButton(
                         systemName: "xmark",
                         accessibilityLabel: "Close",
@@ -78,6 +78,7 @@ struct TopBar: View {
 // MARK: - Supporting types
 
 struct TopBarConfig {
+    var showCloseButton: Bool = true
     var showEditButton: Bool
     var showSelectButton: Bool
     var selectionMode: Bool
@@ -109,9 +110,10 @@ struct CircleButton: View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(isGlassMode ? .white : tintColor)
+                .foregroundStyle(isGlassMode ? Color(.label) : tintColor)
                 .frame(width: 36, height: 36)
         }
+        .buttonStyle(.plain)
         .modifier(CircleButtonBackground(tintColor: tintColor, isGlassMode: isGlassMode))
         .accessibilityLabel(accessibilityLabel)
         .modifier(OptionalHintModifier(hint: accessibilityHint))
