@@ -54,6 +54,9 @@ public struct HImageViewer: View {
     @State private var selectedIndices: Set<Int> = []
     @State private var comment: String
     @State private var wasImageEdited = false
+    @State private var dragOffset: CGFloat = 0
+
+    private let dismissThreshold: CGFloat = 120
 
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var uploadState: HImageViewerUploadState
@@ -79,6 +82,11 @@ public struct HImageViewer: View {
     private var pageCounterText: String? {
         guard assets.count > 1, !selectionMode else { return nil }
         return "\(currentIndex + 1) / \(assets.count)"
+    }
+
+    /// 0→1 progress of the drag towards the dismiss threshold.
+    private var dragProgress: Double {
+        min(Double(max(0, dragOffset)) / Double(dismissThreshold), 1.0)
     }
 
     // MARK: - Initialization
@@ -118,6 +126,9 @@ public struct HImageViewer: View {
     public var body: some View {
         ZStack {
             mainComponent
+                .offset(y: max(0, dragOffset))
+                .opacity(1 - dragProgress * 0.35)
+                .gesture(dragToDismissGesture)
                 .onAppear {
                     if uploadState.progress == 1.0 {
                         uploadState.progress = nil
@@ -205,6 +216,47 @@ public struct HImageViewer: View {
                 currentIndex = min(currentIndex, newCount - 1)
             }
         }
+        .onChangeCompat(of: selectionMode) { _ in
+            // Reset any in-flight drag when entering/exiting selection mode
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                dragOffset = 0
+            }
+        }
+    }
+
+    // MARK: - Drag-to-Dismiss Gesture
+
+    private var dragToDismissGesture: some Gesture {
+        DragGesture(minimumDistance: 10)
+            .onChanged { value in
+                guard !selectionMode, uploadState.progress == nil else { return }
+                let translation = value.translation
+                // Activate only for predominantly downward drags to avoid
+                // conflicting with horizontal TabView paging
+                guard translation.height > 0,
+                      translation.height > abs(translation.width) * 1.5 else { return }
+                dragOffset = translation.height
+            }
+            .onEnded { value in
+                let rawHeight = value.translation.height
+                let predictedHeight = value.predictedEndTranslation.height
+                let shouldDismiss = rawHeight > dismissThreshold
+                    || predictedHeight > dismissThreshold
+
+                if shouldDismiss {
+                    withAnimation(.easeOut(duration: 0.25)) {
+                        dragOffset = UIScreen.main.bounds.height
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        dismiss()
+                        delegate?.didTapCloseButton()
+                    }
+                } else {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                        dragOffset = 0
+                    }
+                }
+            }
     }
 
     @ViewBuilder
