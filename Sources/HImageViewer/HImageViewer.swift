@@ -189,7 +189,8 @@ public struct HImageViewer: View {
                         mediaItems: gridItems,
                         selectedIndices: vm.selectedIndices,
                         selectionMode: vm.selectionMode,
-                        onSelectToggle: { vm.handleSelection($0) }
+                        onSelectToggle: { vm.handleSelection($0) },
+                        onReorder: { from, to in vm.reorderItems(from: from, to: to) }
                     )
                     .background(.regularMaterial)
                     .transition(.opacity)

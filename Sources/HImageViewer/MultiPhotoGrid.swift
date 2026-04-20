@@ -7,11 +7,13 @@
 
 import SwiftUI
 import Photos
+import UniformTypeIdentifiers
 
 /// A scrollable grid of thumbnail tiles shown in selection mode.
 ///
 /// Each tile displays a photo thumbnail (via `PhotoView`) or a video placeholder icon.
-/// A checkmark overlay appears on top of selected tiles.
+/// A checkmark overlay appears on top of selected tiles. Long-press and drag any tile
+/// to reorder items within the grid.
 public struct MultiPhotoGrid: View {
 
     // MARK: - Properties
@@ -20,8 +22,13 @@ public struct MultiPhotoGrid: View {
     let selectedIndices: Set<Int>
     let selectionMode: Bool
     let onSelectToggle: (Int) -> Void
+    /// Called with `(fromIndex, toIndex)` whenever a drag-to-reorder completes.
+    /// `nil` disables reordering (default, backward-compatible).
+    var onReorder: ((Int, Int) -> Void)? = nil
 
     let itemSize: CGFloat = 110
+
+    @State private var draggingIndex: Int? = nil
 
     // MARK: - Body
 
@@ -59,6 +66,23 @@ public struct MultiPhotoGrid: View {
                         .accessibilityHint("Double-tap to toggle selection")
                     }
                 }
+                // Dim the tile that is currently being dragged.
+                .opacity(draggingIndex == index ? 0.5 : 1.0)
+                .animation(.easeInOut(duration: 0.15), value: draggingIndex)
+                // Drag source — long-press activates automatically.
+                .onDrag {
+                    draggingIndex = index
+                    return NSItemProvider(object: "\(index)" as NSString)
+                }
+                // Drop target — each tile accepts a drop from any other tile.
+                .onDrop(
+                    of: [UTType.text],
+                    delegate: GridDropDelegate(
+                        targetIndex: index,
+                        draggingIndex: $draggingIndex,
+                        onReorder: onReorder
+                    )
+                )
             }
         }
         .padding(.horizontal)
@@ -86,5 +110,31 @@ public struct MultiPhotoGrid: View {
                     .foregroundColor(.white.opacity(0.9))
             }
         }
+    }
+}
+
+// MARK: - Drop Delegate
+
+/// Handles live tile swapping as the user drags across the grid.
+private struct GridDropDelegate: DropDelegate {
+
+    let targetIndex: Int
+    @Binding var draggingIndex: Int?
+    let onReorder: ((Int, Int) -> Void)?
+
+    /// Fires continuously as the dragged tile hovers over this tile — performs live swap.
+    func dropEntered(info: DropInfo) {
+        guard let from = draggingIndex, from != targetIndex else { return }
+        onReorder?(from, targetIndex)
+        draggingIndex = targetIndex
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggingIndex = nil
+        return true
     }
 }
