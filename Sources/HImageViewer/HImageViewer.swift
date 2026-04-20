@@ -75,6 +75,12 @@ public struct HImageViewer: View {
         assets[safe: currentIndex]
     }
 
+    /// `"2 / 5"` when there are multiple assets and not in selection mode; `nil` otherwise.
+    private var pageCounterText: String? {
+        guard assets.count > 1, !selectionMode else { return nil }
+        return "\(currentIndex + 1) / \(assets.count)"
+    }
+
     // MARK: - Initialization
 
     /// Creates a new image viewer instance.
@@ -147,6 +153,7 @@ public struct HImageViewer: View {
                 showEditButton: config.showEditButton,
                 showSelectButton: assets.count > 1,
                 selectionMode: selectionMode,
+                pageCounterText: pageCounterText,
                 onDismiss: { dismiss(); delegate?.didTapCloseButton() },
                 onCancelSelection: {
                     selectionMode = false
@@ -174,6 +181,10 @@ public struct HImageViewer: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .animation(.easeInOut(duration: 0.2), value: selectionMode)
+
+            if !selectionMode {
+                PageDotsView(currentIndex: currentIndex, count: assets.count)
+            }
 
             BottomBar(comment: $comment, config: BottomBarConfig(
                 selectionMode: selectionMode,
