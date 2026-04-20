@@ -34,7 +34,9 @@ struct ZoomableImageView: View {
                 .contentShape(Rectangle())
                 .onTapGesture(count: 2) { handleDoubleTap() }
                 .gesture(magnificationGesture)
-                .simultaneousGesture(dragGesture(in: geometry))
+                // Only attach the pan drag while zoomed in — at scale 1.0 the
+                // gesture would race with TabView's horizontal page-swipe.
+                .simultaneousGesture(scale > ZoomDefaults.minScale ? dragGesture(in: geometry) : nil)
         }
     }
 
