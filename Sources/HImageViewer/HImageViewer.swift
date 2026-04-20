@@ -251,6 +251,7 @@ public struct HImageViewer: View {
                     || predictedHeight > vm.dismissThreshold
 
                 if shouldDismiss {
+                    vm.haptics.impact(.light)
                     withAnimation(.easeOut(duration: 0.25)) {
                         vm.dragOffset = UIScreen.main.bounds.height
                     }
