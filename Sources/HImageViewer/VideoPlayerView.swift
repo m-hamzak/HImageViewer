@@ -5,11 +5,16 @@
 //  Created by Hamza Khalid on 21/04/2025.
 //
 
-
 import SwiftUI
 import AVKit
 
-public struct VideoPlayerView: View {
+/// A SwiftUI wrapper around `AVKit.VideoPlayer` for use inside `HImageViewer`.
+///
+/// - The player is **not** started automatically — the viewer shows native AVKit transport controls
+///   so the user can start playback with a tap.
+/// - Playback is paused and the player item is released when the view disappears, preventing
+///   background audio leakage when the user swipes to another page.
+struct VideoPlayerView: View {
 
     // MARK: - Properties
 
@@ -18,33 +23,29 @@ public struct VideoPlayerView: View {
 
     // MARK: - Body
 
-    public var body: some View {
-        VStack {
-            Spacer()
-            VideoPlayer(player: playerHolder.player)
-                .onAppear {
-                    let item = AVPlayerItem(url: videoURL)
-                    playerHolder.player.replaceCurrentItem(with: item)
-                    playerHolder.player.seek(to: .zero)
-                    playerHolder.player.play()
-                }
-                .onDisappear {
-                    playerHolder.player.pause()
-                    playerHolder.player.replaceCurrentItem(with: nil)
-                }
-                .frame(height: 300)
-                .cornerRadius(12)
-                .shadow(radius: 4)
-            Spacer()
-        }
-
+    var body: some View {
+        VideoPlayer(player: playerHolder.player)
+            .aspectRatio(16 / 9, contentMode: .fit)
+            .cornerRadius(12)
+            .shadow(radius: 4)
+            .onAppear {
+                let item = AVPlayerItem(url: videoURL)
+                playerHolder.player.replaceCurrentItem(with: item)
+                // Seek to beginning but do NOT autoplay — user controls playback.
+                playerHolder.player.seek(to: .zero)
+            }
+            .onDisappear {
+                playerHolder.player.pause()
+                playerHolder.player.replaceCurrentItem(with: nil)
+            }
     }
 }
 
 // MARK: - Player Holder
 
-final class PlayerHolder: ObservableObject {
-    @Published var player = AVPlayer()
+/// Wraps `AVPlayer` in an `ObservableObject` so SwiftUI manages its lifetime correctly.
+private final class PlayerHolder: ObservableObject {
+    let player = AVPlayer()
 
     deinit {
         player.replaceCurrentItem(with: nil)

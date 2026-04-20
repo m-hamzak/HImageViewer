@@ -49,8 +49,9 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
     @Published public var image: UIImage?
     public var imageURL: URL?
 
-    // Track active image requests for cancellation
+    // Track active requests for cancellation
     private var currentRequestID: PHImageRequestID?
+    private var urlLoadTask: Task<Void, Never>?
 
     // MARK: - Initialization
 
@@ -93,14 +94,15 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
 
     /// Loads a thumbnail-sized version of the image asynchronously.
     ///
-    /// This method is optimized for fast loading and is suitable for grid views or lists.
+    /// - `UIImage` assets return immediately.
+    /// - `PHAsset` assets use `PHImageManager` with fast-format delivery.
+    /// - URL assets delegate to `loadFullImage` — the cached full image is returned on subsequent calls.
     ///
     /// - Parameters:
-    ///   - targetSize: The desired size for the thumbnail. The actual size may vary to maintain aspect ratio.
-    ///   - completion: Called on the main thread with the loaded image, or `nil` if loading fails.
+    ///   - targetSize: Desired thumbnail size for `PHAsset` requests.
+    ///   - completion: Called on the main thread with the loaded image, or `nil` on failure.
     ///
-    /// - Note: If the image is already loaded, the completion handler is called immediately with the cached image.
-    /// - Important: Pending requests are automatically cancelled when the asset is deallocated.
+    /// - Note: Call `cancelPendingLoad()` to cancel an in-flight request.
     public func loadThumbnail(targetSize: CGSize, completion: @escaping (UIImage?) -> Void) {
         if let image = image {
             completion(image)
@@ -121,6 +123,10 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
                 completion(result)
             }
             currentRequestID = requestID
+        } else if imageURL != nil {
+            // URL assets have no native thumbnail — delegate to full load.
+            // Subsequent calls will hit the in-memory cache immediately.
+            loadFullImage(completion: completion)
         } else {
             completion(nil)
         }
@@ -128,16 +134,20 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
 
     /// Loads the full-resolution version of the image asynchronously.
     ///
-    /// This method requests the highest quality image available and is suitable for single photo viewing.
+    /// - `UIImage` assets return immediately.
+    /// - `PHAsset` assets use `PHImageManager` with high-quality delivery.
+    /// - URL assets check `ImageCache` first; on a miss, fetches via `URLSession` and populates the cache.
     ///
-    /// - Parameter completion: Called on the main thread with the loaded image, or `nil` if loading fails.
+    /// - Parameter completion: Called on the main thread with the loaded image, or `nil` on failure.
     ///
-    /// - Note: If the image is already loaded, the completion handler is called immediately with the cached image.
-    /// - Important: Pending requests are automatically cancelled when the asset is deallocated.
+    /// - Note: Call `cancelPendingLoad()` to cancel an in-flight request.
     public func loadFullImage(completion: @escaping (UIImage?) -> Void) {
         if let image = image {
             completion(image)
-        } else if let phAsset = phAsset {
+            return
+        }
+
+        if let phAsset = phAsset {
             let options = PHImageRequestOptions()
             options.deliveryMode = .highQualityFormat
             options.isSynchronous = false
@@ -155,8 +165,52 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
                 completion(result)
             }
             currentRequestID = requestID
-        } else {
-            completion(nil)
+            return
+        }
+
+        if let url = imageURL {
+            // Cache hit — return synchronously
+            if let cached = ImageCache.shared[url] {
+                image = cached
+                completion(cached)
+                return
+            }
+            // Cache miss — fetch from network
+            urlLoadTask?.cancel()
+            urlLoadTask = Task {
+                do {
+                    let (data, _) = try await URLSession.shared.data(from: url)
+                    guard !Task.isCancelled else { return }
+                    if let loaded = UIImage(data: data) {
+                        ImageCache.shared[url] = loaded
+                        self.image = loaded
+                        completion(loaded)
+                    } else {
+                        completion(nil)
+                    }
+                } catch {
+                    guard !Task.isCancelled else { return }
+                    completion(nil)
+                }
+            }
+            return
+        }
+
+        completion(nil)
+    }
+
+    // MARK: - Cancellation
+
+    /// Cancels any in-flight image load (URL fetch or PHAsset request).
+    ///
+    /// Call this when the view displaying this asset disappears to avoid
+    /// redundant network and Photos framework activity.
+    public func cancelPendingLoad() {
+        urlLoadTask?.cancel()
+        urlLoadTask = nil
+        if let requestID = currentRequestID {
+            PHImageManager.default().cancelImageRequest(requestID)
+            currentRequestID = nil
         }
     }
 
@@ -166,8 +220,9 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
         return lhs.id == rhs.id
     }
 
-    // Cancel any pending image requests on deallocation
+    // Cancel all pending requests on deallocation
     deinit {
+        urlLoadTask?.cancel()
         if let requestID = currentRequestID {
             PHImageManager.default().cancelImageRequest(requestID)
         }

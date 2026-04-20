@@ -79,16 +79,18 @@ final class PhotoAssetTests: XCTestCase {
         XCTAssertNotNil(result, "Cached image should be returned immediately")
     }
 
-    func test_loadThumbnail_withNoPhAssetAndNoImage_returnsNil() {
-        let asset = PhotoAsset(imageURL: URL(string: "https://example.com/img.jpg")!)
+    func test_loadThumbnail_urlAsset_cacheMiss_doesNotCompleteSync() {
+        // Cache miss for a URL asset starts an async Task — completion must NOT fire synchronously.
+        let url = URL(string: "https://example.com/img-\(UUID()).jpg")!
+        ImageCache.shared[url] = nil  // ensure cache miss
+        let asset = PhotoAsset(imageURL: url)
 
-        // Use a sentinel value to distinguish "completion not called" from "completion(nil)"
-        var result: UIImage? = UIImage()  // sentinel: non-nil
-        asset.loadThumbnail(targetSize: CGSize(width: 100, height: 100)) { image in
-            result = image  // should set to nil
+        var completionFired = false
+        asset.loadThumbnail(targetSize: CGSize(width: 100, height: 100)) { _ in
+            completionFired = true
         }
 
-        XCTAssertNil(result, "URL-only assets should return nil from loadThumbnail")
+        XCTAssertFalse(completionFired, "Cache miss must not complete synchronously")
     }
 
     func test_loadFullImage_withPreloadedImage_returnsImmediately() {
@@ -103,15 +105,18 @@ final class PhotoAssetTests: XCTestCase {
         XCTAssertNotNil(result, "Cached image should be returned immediately from loadFullImage")
     }
 
-    func test_loadFullImage_withNoPhAssetAndNoImage_returnsNil() {
-        let asset = PhotoAsset(imageURL: URL(string: "https://example.com/img.jpg")!)
-        var result: UIImage? = UIImage()  // sentinel
+    func test_loadFullImage_urlAsset_cacheMiss_doesNotCompleteSync() {
+        // Cache miss for a URL asset starts an async Task — completion must NOT fire synchronously.
+        let url = URL(string: "https://example.com/img-\(UUID()).jpg")!
+        ImageCache.shared[url] = nil  // ensure cache miss
+        let asset = PhotoAsset(imageURL: url)
 
-        asset.loadFullImage { image in
-            result = image
+        var completionFired = false
+        asset.loadFullImage { _ in
+            completionFired = true
         }
 
-        XCTAssertNil(result, "URL-only assets should return nil from loadFullImage")
+        XCTAssertFalse(completionFired, "Cache miss must not complete synchronously")
     }
 
     // MARK: - Factory Method Tests
@@ -144,8 +149,80 @@ final class PhotoAssetTests: XCTestCase {
         let images = [UIImage(systemName: "star")!, UIImage(systemName: "heart")!]
         let assets = PhotoAsset.from(uiImages: images)
 
-        // Convert to a Set — if any IDs are duplicates, the set will be smaller
         let uniqueIDs = Set(assets.map(\.id))
         XCTAssertEqual(uniqueIDs.count, assets.count, "All assets must have unique IDs")
+    }
+
+    // MARK: - URL Cache-Hit Tests
+
+    func test_loadFullImage_urlAsset_cacheHit_returnsImmediately() {
+        let url = URL(string: "https://example.com/cached.jpg")!
+        let cachedImage = UIImage(systemName: "star")!
+        ImageCache.shared[url] = cachedImage
+
+        let asset = PhotoAsset(imageURL: url)
+        var result: UIImage?
+
+        asset.loadFullImage { image in
+            result = image
+        }
+
+        // Cache hit path is synchronous — result available immediately
+        XCTAssertNotNil(result, "Cache hit must return image synchronously")
+        XCTAssertNotNil(asset.image, "Cache hit must also set asset.image")
+
+        // Cleanup
+        ImageCache.shared[url] = nil
+    }
+
+    func test_loadThumbnail_urlAsset_cacheHit_returnsImmediately() {
+        let url = URL(string: "https://example.com/thumb-cached.jpg")!
+        let cachedImage = UIImage(systemName: "heart")!
+        ImageCache.shared[url] = cachedImage
+
+        let asset = PhotoAsset(imageURL: url)
+        var result: UIImage?
+
+        asset.loadThumbnail(targetSize: CGSize(width: 100, height: 100)) { image in
+            result = image
+        }
+
+        XCTAssertNotNil(result, "loadThumbnail for URL with cache hit must return immediately")
+
+        // Cleanup
+        ImageCache.shared[url] = nil
+    }
+
+    func test_loadFullImage_urlAsset_cacheMiss_doesNotReturnImmediately() {
+        let url = URL(string: "https://example.com/not-cached-\(UUID()).jpg")!
+        ImageCache.shared[url] = nil // ensure cache miss
+
+        let asset = PhotoAsset(imageURL: url)
+        var callbackFired = false
+
+        asset.loadFullImage { _ in
+            callbackFired = true
+        }
+
+        // Cache miss starts an async task — callback has NOT fired yet synchronously
+        XCTAssertFalse(callbackFired, "Cache miss must not complete synchronously")
+    }
+
+    // MARK: - cancelPendingLoad
+
+    func test_cancelPendingLoad_safeWhenNothingPending() {
+        let asset = PhotoAsset(image: UIImage(systemName: "star")!)
+        // Must not crash
+        asset.cancelPendingLoad()
+    }
+
+    func test_cancelPendingLoad_afterURLLoad_doesNotCrash() {
+        let url = URL(string: "https://example.com/cancel-test.jpg")!
+        let asset = PhotoAsset(imageURL: url)
+
+        // Start a network load then immediately cancel
+        asset.loadFullImage { _ in }
+        asset.cancelPendingLoad()
+        // Reaching here = no crash
     }
 }
