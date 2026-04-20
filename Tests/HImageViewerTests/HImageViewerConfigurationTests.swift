@@ -175,6 +175,40 @@ final class HImageViewerConfigurationTests: XCTestCase {
         XCTAssertEqual(config.resolvedTintColor, Color.orange)
     }
 
+    // MARK: - backgroundColor
+
+    func test_backgroundColor_defaultIsSystemBackground() {
+        XCTAssertEqual(HImageViewerConfiguration().backgroundColor, Color(.systemBackground),
+                       "Default backgroundColor must be Color(.systemBackground) so the viewer adapts to light/dark mode")
+    }
+
+    func test_backgroundColor_customBlack_stored() {
+        let config = HImageViewerConfiguration(backgroundColor: .black)
+        XCTAssertEqual(config.backgroundColor, .black)
+    }
+
+    func test_backgroundColor_customColor_preserved() {
+        let config = HImageViewerConfiguration(backgroundColor: .purple)
+        XCTAssertEqual(config.backgroundColor, .purple)
+    }
+
+    func test_backgroundColor_independentOfGlassMode() {
+        // Changing backgroundColor must not influence tintColor / isGlassMode.
+        let config = HImageViewerConfiguration(backgroundColor: .black)
+        XCTAssertTrue(config.isGlassMode,
+                      "Custom backgroundColor must not deactivate glass mode")
+        XCTAssertNil(config.tintColor,
+                     "Custom backgroundColor must not set tintColor")
+    }
+
+    func test_backgroundColor_tintColorAndBackgroundIndependent() {
+        // Both can be customised simultaneously without interference.
+        let config = HImageViewerConfiguration(backgroundColor: Color.black, tintColor: Color.orange)
+        XCTAssertEqual(config.tintColor, Color.orange)
+        XCTAssertEqual(config.backgroundColor, Color.black)
+        XCTAssertFalse(config.isGlassMode)
+    }
+
     func test_allNonDefaultValues_storeProperly() {
         let delegate    = MockDelegate()
         let uploadState = HImageViewerUploadState(progress: 0.5)
@@ -186,7 +220,8 @@ final class HImageViewerConfigurationTests: XCTestCase {
             showEditButton: false,
             title: "My Title",
             uploadState: uploadState,
-            tintColor: .orange,
+            backgroundColor: Color.black,
+            tintColor: Color.orange,
             placeholderView: AnyView(Text("Loading")),
             errorView: AnyView(Text("Error"))
         )
@@ -197,6 +232,7 @@ final class HImageViewerConfigurationTests: XCTestCase {
         XCTAssertFalse(config.showEditButton)
         XCTAssertEqual(config.title, "My Title")
         XCTAssertNotNil(config.uploadState)
+        XCTAssertEqual(config.backgroundColor, .black)
         XCTAssertEqual(config.tintColor, Color.orange)
         XCTAssertNotNil(config.placeholderView)
         XCTAssertNotNil(config.errorView)

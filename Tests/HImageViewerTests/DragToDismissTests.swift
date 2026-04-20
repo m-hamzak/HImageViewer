@@ -188,6 +188,47 @@ final class DragToDismissTests: XCTestCase {
         XCTAssertFalse(isDominantlyDownward(x: 0, y: 0))
     }
 
+    // MARK: - Navigation stack suppression
+    //
+    // Drag-to-dismiss is a modal pattern only. When the viewer is pushed onto a
+    // UINavigationController the system's interactive-pop gesture handles dismissal,
+    // so the drag gesture must be nil (not just guarded) to avoid interference.
+
+    func test_gestureNil_whenInNavigationStack() {
+        let isInNavigationStack = true
+        let gestureActive = !isInNavigationStack
+        XCTAssertFalse(gestureActive,
+                       "Drag-to-dismiss must be suppressed when pushed onto a navigation stack")
+    }
+
+    func test_gestureActive_whenNotInNavigationStack() {
+        let isInNavigationStack = false
+        let gestureActive = !isInNavigationStack
+        XCTAssertTrue(gestureActive,
+                      "Drag-to-dismiss must be active for modal presentation")
+    }
+
+    func test_gestureNil_navigationStack_overridesSelectionModeCheck() {
+        // Even if selectionMode is false and no upload is in progress,
+        // being in a navigation stack alone is sufficient to suppress the gesture.
+        let isInNavigationStack = true
+        let selectionMode       = false
+        let uploadInProgress    = false
+        let gestureActive = !isInNavigationStack && !selectionMode && !uploadInProgress
+        XCTAssertFalse(gestureActive,
+                       "Navigation stack takes priority — gesture must remain nil")
+    }
+
+    func test_gestureActive_modalNoSelectionNoUpload() {
+        // All three suppressors off → gesture must be active.
+        let isInNavigationStack = false
+        let selectionMode       = false
+        let uploadInProgress    = false
+        let gestureActive = !isInNavigationStack && !selectionMode && !uploadInProgress
+        XCTAssertTrue(gestureActive,
+                      "All suppressors off → drag-to-dismiss must be active")
+    }
+
     // MARK: - Upload suppression edge cases
 
     func test_gestureDisabled_uploadJustStarted() {

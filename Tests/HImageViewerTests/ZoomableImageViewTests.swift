@@ -227,6 +227,42 @@ final class ZoomableImageViewTests: XCTestCase {
         XCTAssertEqual(pos.height, -neg.height, accuracy: 0.001)
     }
 
+    // MARK: - Pan drag gesture condition
+    //
+    // The drag gesture is only attached when `scale > ZoomDefaults.minScale`.
+    // At minScale it must be absent so it does not compete with TabView paging.
+
+    func test_dragGestureCondition_falseAtMinScale() {
+        let scale = ZoomDefaults.minScale
+        XCTAssertFalse(scale > ZoomDefaults.minScale,
+                       "Pan drag gesture must NOT be active at minScale — TabView must own horizontal swipes")
+    }
+
+    func test_dragGestureCondition_trueSlightlyAboveMinScale() {
+        let scale = ZoomDefaults.minScale + 0.01
+        XCTAssertTrue(scale > ZoomDefaults.minScale,
+                      "Pan drag gesture must be active the instant scale exceeds minScale")
+    }
+
+    func test_dragGestureCondition_trueAtDoubleTapScale() {
+        XCTAssertTrue(ZoomDefaults.doubleTapScale > ZoomDefaults.minScale,
+                      "Pan drag must be active at the double-tap zoom level")
+    }
+
+    func test_dragGestureCondition_trueAtMaxScale() {
+        XCTAssertTrue(ZoomDefaults.maxScale > ZoomDefaults.minScale,
+                      "Pan drag must be active at maxScale")
+    }
+
+    func test_dragGestureCondition_falseAfterResetToMinScale() {
+        // Simulate zoom-in, then reset.
+        var scale = ZoomDefaults.doubleTapScale
+        XCTAssertTrue(scale > ZoomDefaults.minScale, "Gesture active while zoomed in")
+        scale = ZoomDefaults.minScale
+        XCTAssertFalse(scale > ZoomDefaults.minScale,
+                       "Gesture must deactivate once scale resets to minScale")
+    }
+
     // MARK: - Constants additional
 
     func test_minScale_isExactlyOne() {

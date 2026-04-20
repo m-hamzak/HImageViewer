@@ -378,6 +378,50 @@ final class HImageViewerLogicTests: XCTestCase {
         XCTAssertFalse(vm.selectionMode)
     }
 
+    // MARK: - Selection mode / content visibility
+    //
+    // The view shows EITHER the paged TabView (selectionMode == false)
+    // OR the grid (selectionMode == true) — never both simultaneously.
+    // These tests verify the ViewModel flag that drives that exclusive switch.
+
+    func test_selectionMode_defaultIsFalse() {
+        let vm = makeVM(assets: makeAssets(3))
+        XCTAssertFalse(vm.selectionMode,
+                       "Viewer must open showing the paged content, not the selection grid")
+    }
+
+    func test_selectionMode_setTrue_gridShown() {
+        let vm = makeVM(assets: makeAssets(3))
+        vm.selectionMode = true
+        XCTAssertTrue(vm.selectionMode,
+                      "selectionMode=true must switch view to show the grid")
+    }
+
+    func test_selectionMode_cancelSelection_contentViewRestored() {
+        let vm = makeVM(assets: makeAssets(3))
+        vm.selectionMode = true
+        vm.cancelSelection()
+        XCTAssertFalse(vm.selectionMode,
+                       "cancelSelection must restore selectionMode=false so the paged content is shown again")
+    }
+
+    func test_selectionMode_handleDelete_contentViewRestored() {
+        let vm = makeVM(assets: makeAssets(3))
+        vm.selectionMode = true
+        vm.selectedIndices = [0]
+        vm.handleDelete()
+        XCTAssertFalse(vm.selectionMode,
+                       "handleDelete must exit selection mode and restore the paged content view")
+    }
+
+    func test_selectionMode_mediaMode_cancelRestores() {
+        let vm = makeVM(mediaAssets: makeMediaAssets(3), usesMediaMode: true)
+        vm.selectionMode = true
+        vm.cancelSelection()
+        XCTAssertFalse(vm.selectionMode,
+                       "Media-mode viewer must also restore selectionMode=false after cancel")
+    }
+
     // MARK: - handleSave
 
     func test_handleSave_legacyMode_callsDelegate() {
