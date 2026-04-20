@@ -42,6 +42,7 @@ final class HImageViewerViewModel: ObservableObject {
     let config: HImageViewerConfiguration
     let uploadState: HImageViewerUploadState
     weak var delegate: HImageViewerControlDelegate?
+    let haptics: HapticFeedbackProviding
 
     let dismissThreshold: CGFloat = 120
 
@@ -53,7 +54,8 @@ final class HImageViewerViewModel: ObservableObject {
         selectedVideo: URL? = nil,
         usesMediaMode: Bool,
         initialIndex: Int = 0,
-        config: HImageViewerConfiguration = .init()
+        config: HImageViewerConfiguration = .init(),
+        haptics: HapticFeedbackProviding = HapticFeedbackProvider()
     ) {
         self.assets = assets
         self.mediaAssets = mediaAssets
@@ -63,6 +65,7 @@ final class HImageViewerViewModel: ObservableObject {
         self.comment = config.initialComment ?? ""
         self.delegate = config.delegate
         self.uploadState = config.uploadState ?? HImageViewerUploadState()
+        self.haptics = haptics
 
         let count = usesMediaMode ? mediaAssets.count : assets.count
         let clamped = count == 0 ? 0 : max(0, min(initialIndex, count - 1))
@@ -120,18 +123,21 @@ final class HImageViewerViewModel: ObservableObject {
         } else {
             selectedIndices.insert(index)
         }
+        haptics.impact(.medium)
     }
 
     /// Exits selection mode and clears all selected indices.
     func cancelSelection() {
         selectionMode = false
         selectedIndices.removeAll()
+        haptics.impact(.light)
     }
 
     // MARK: - Delete
 
     /// Removes all currently selected items and exits selection mode.
     func handleDelete() {
+        guard !selectedIndices.isEmpty else { return }
         if usesMediaMode {
             let deletedIDs = Set(selectedIndices.compactMap { mediaAssets[safe: $0]?.id })
             mediaAssets.removeAll { deletedIDs.contains($0.id) }
@@ -153,6 +159,32 @@ final class HImageViewerViewModel: ObservableObject {
                 currentIndex = min(currentIndex, assets.count - 1)
             }
         }
+        haptics.impact(.heavy)
+    }
+
+    // MARK: - Reorder
+
+    /// Moves the item at `fromIndex` to `toIndex`, clearing the current selection.
+    ///
+    /// No-ops when either index is out of bounds or both indices are equal.
+    func reorderItems(from fromIndex: Int, to toIndex: Int) {
+        guard fromIndex != toIndex else { return }
+        if usesMediaMode {
+            guard fromIndex >= 0, toIndex >= 0,
+                  fromIndex < mediaAssets.count, toIndex < mediaAssets.count else { return }
+            mediaAssets.move(
+                fromOffsets: IndexSet(integer: fromIndex),
+                toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex
+            )
+        } else {
+            guard fromIndex >= 0, toIndex >= 0,
+                  fromIndex < assets.count, toIndex < assets.count else { return }
+            assets.move(
+                fromOffsets: IndexSet(integer: fromIndex),
+                toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex
+            )
+        }
+        selectedIndices.removeAll()
     }
 
     // MARK: - Save
@@ -165,5 +197,6 @@ final class HImageViewerViewModel: ObservableObject {
         } else {
             delegate?.didTapSaveButton(comment: comment, photos: assets)
         }
+        haptics.impact(.medium)
     }
 }
