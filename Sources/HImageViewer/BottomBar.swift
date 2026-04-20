@@ -40,7 +40,7 @@ struct BottomBar: View {
         if config.showCommentBox {
             TextField("Add a comment…", text: $comment)
                 .textFieldStyle(.plain)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 .tint(config.tintColor)
                 .frame(maxWidth: .infinity)
                 .accessibilityLabel("Comment")
@@ -48,7 +48,7 @@ struct BottomBar: View {
         } else if let title = config.title {
             Text(title)
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityAddTraits(.isHeader)
         } else {

@@ -17,13 +17,13 @@ extension View {
             self.glassEffect(in: Circle())
         } else {
             self
-                .background(Circle().fill(.ultraThinMaterial))
-                .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 0.5))
+                .background(Circle().fill(.regularMaterial))
+                .overlay(Circle().stroke(Color(.separator), lineWidth: 0.5))
         }
     }
 
     /// Clips the view to a rounded rectangle and applies an iOS 26 glass effect.
-    /// Falls back to `ultraThinMaterial` on iOS 15–25.
+    /// Falls back to `regularMaterial` on iOS 15–25.
     @ViewBuilder
     func glassRoundedRect(cornerRadius: CGFloat = 20) -> some View {
         if #available(iOS 26, *) {
@@ -34,11 +34,11 @@ extension View {
             self
                 .background(
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(.ultraThinMaterial)
+                        .fill(.regularMaterial)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .stroke(Color.white.opacity(0.18), lineWidth: 0.5)
+                        .stroke(Color(.separator), lineWidth: 0.5)
                 )
         }
     }

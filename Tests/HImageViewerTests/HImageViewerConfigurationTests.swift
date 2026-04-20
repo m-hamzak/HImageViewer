@@ -115,9 +115,9 @@ final class HImageViewerConfigurationTests: XCTestCase {
         XCTAssertEqual(config.tintColor, Color.purple)
     }
 
-    func test_resolvedTintColor_nilReturnsBlue() {
-        XCTAssertEqual(HImageViewerConfiguration().resolvedTintColor, Color.blue,
-                       "resolvedTintColor must return .blue as fallback when tintColor is nil")
+    func test_resolvedTintColor_nilReturnsAccentColor() {
+        XCTAssertEqual(HImageViewerConfiguration().resolvedTintColor, Color.accentColor,
+                       "resolvedTintColor must return .accentColor as fallback when tintColor is nil")
     }
 
     func test_resolvedTintColor_whenSet_returnsSetColor() {
@@ -166,8 +166,8 @@ final class HImageViewerConfigurationTests: XCTestCase {
         }
     }
 
-    func test_resolvedTintColor_nilFallsBackToBlue() {
-        XCTAssertEqual(HImageViewerConfiguration().resolvedTintColor, Color.blue)
+    func test_resolvedTintColor_nilFallsBackToAccentColor() {
+        XCTAssertEqual(HImageViewerConfiguration().resolvedTintColor, Color.accentColor)
     }
 
     func test_resolvedTintColor_customColorPreserved() {

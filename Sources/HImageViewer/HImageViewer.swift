@@ -53,6 +53,10 @@ public struct HImageViewer: View {
     @StateObject private var vm: HImageViewerViewModel
     @Environment(\.dismiss) private var dismiss
 
+    /// Automatically `true` when the hosting controller is pushed onto a
+    /// UINavigationController rather than presented modally.
+    @State private var isInNavigationStack: Bool = false
+
     // MARK: - Initialisation (mixed photo + video)
 
     /// Creates a new image/video viewer from a unified `MediaAsset` collection.
@@ -117,8 +121,17 @@ public struct HImageViewer: View {
 
     public var body: some View {
         ZStack {
-            // Pure black canvas — fills behind the status bar too.
-            Color.black.ignoresSafeArea()
+            // Canvas — fills behind the status bar too.
+            // Defaults to systemBackground so it adapts to light/dark mode automatically.
+            vm.config.backgroundColor.ignoresSafeArea()
+
+            // Invisible detector — reads the UIKit responder chain on appear
+            // to decide whether this hosting controller is pushed or presented.
+            NavigationDetector { isPushed in
+                isInNavigationStack = isPushed
+            }
+            .frame(width: 0, height: 0)
+            .allowsHitTesting(false)
 
             mainComponent
                 .offset(y: max(0, vm.dragOffset))
@@ -149,10 +162,9 @@ public struct HImageViewer: View {
                 .transition(.opacity)
             }
         }
-        // In glass mode, force dark appearance so materials render as dark frosted glass
-        // and white icons/text are always legible against the black canvas.
-        // In classic (tinted) mode, follow the system color scheme.
-        .preferredColorScheme(vm.config.isGlassMode ? .dark : nil)
+        // Follow the system color scheme in all modes.
+        // Glass materials (.glassEffect / .ultraThinMaterial) and .primary foreground
+        // colors adapt automatically — no forced dark override needed.
         // Sync ViewModel mutations back to caller's bindings.
         .onChangeCompat(of: vm.assets) { externalAssets = $0 }
         .onChangeCompat(of: vm.mediaAssets) { externalMediaAssets = $0 }
@@ -163,6 +175,7 @@ public struct HImageViewer: View {
     private var mainComponent: some View {
         VStack(spacing: 0) {
             TopBar(config: TopBarConfig(
+                showCloseButton: !isInNavigationStack,
                 showEditButton: vm.config.showEditButton && vm.currentPhotoAsset != nil,
                 showSelectButton: vm.totalCount > 1,
                 selectionMode: vm.selectionMode,
@@ -315,6 +328,65 @@ public struct HImageViewer: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+        }
+    }
+}
+
+// MARK: - Navigation Detection
+
+/// A zero-size UIViewRepresentable that detects whether its hosting
+/// UIViewController is pushed onto a UINavigationController.
+///
+/// It walks the UIKit responder chain on `didMoveToWindow` and calls
+/// `onDetect(true)` when a navigation controller is found, `false` otherwise.
+/// This lets `HImageViewer` auto-hide its X close button when pushed, since
+/// the navigation back button already handles dismissal.
+private struct NavigationDetector: UIViewRepresentable {
+
+    var onDetect: (Bool) -> Void
+
+    func makeUIView(context: Context) -> _DetectorView {
+        _DetectorView(onDetect: onDetect)
+    }
+
+    func updateUIView(_ uiView: _DetectorView, context: Context) {
+        uiView.onDetect = onDetect
+    }
+
+    // MARK: - Internal UIView
+
+    final class _DetectorView: UIView {
+
+        var onDetect: (Bool) -> Void
+
+        init(onDetect: @escaping (Bool) -> Void) {
+            self.onDetect = onDetect
+            super.init(frame: .zero)
+            backgroundColor = .clear
+            isUserInteractionEnabled = false
+        }
+
+        required init?(coder: NSCoder) { fatalError("not used") }
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            guard window != nil else { return }
+            // Defer one runloop tick so the VC hierarchy is fully assembled.
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                let isPushed = self.parentViewController?.navigationController != nil
+                self.onDetect(isPushed)
+            }
+        }
+
+        /// Walks the UIKit responder chain to find the nearest UIViewController.
+        private var parentViewController: UIViewController? {
+            var responder: UIResponder? = next
+            while let r = responder {
+                if let vc = r as? UIViewController { return vc }
+                responder = r.next
+            }
+            return nil
         }
     }
 }
