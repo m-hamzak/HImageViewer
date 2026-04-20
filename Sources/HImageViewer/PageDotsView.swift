@@ -34,6 +34,8 @@ struct PageDotsView: View {
                 }
             }
             .padding(.vertical, 8)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(accessibilityLabel)
         }
     }
 
@@ -41,5 +43,10 @@ struct PageDotsView: View {
 
     var shouldShow: Bool {
         count >= 2 && count <= Self.maxDots
+    }
+
+    /// VoiceOver label summarising the current position, e.g. `"Page 2 of 5"`.
+    var accessibilityLabel: String {
+        "Page \(currentIndex + 1) of \(count)"
     }
 }

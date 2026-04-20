@@ -43,11 +43,14 @@ struct BottomBar: View {
                 .foregroundStyle(.white)
                 .tint(config.tintColor)
                 .frame(maxWidth: .infinity)
+                .accessibilityLabel("Comment")
+                .accessibilityHint("Enter a comment to save with the photo")
         } else if let title = config.title {
             Text(title)
                 .font(.headline)
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityAddTraits(.isHeader)
         } else {
             Spacer()
         }
@@ -65,6 +68,8 @@ struct BottomBar: View {
                 .background(Capsule().fill(config.tintColor))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(config.selectionMode ? "Remove selected items" : "Save photo")
+        .accessibilityHint(config.selectionMode ? "Deletes the selected photos" : "Saves the photo and comment")
     }
 
     // MARK: - Classic style (when tintColor is provided)
@@ -86,6 +91,8 @@ struct BottomBar: View {
                     .tint(config.tintColor)
                     .padding(.trailing)
                     .padding(.bottom, 16)
+                    .accessibilityLabel(config.selectionMode ? "Remove selected items" : "Save photo")
+                    .accessibilityHint(config.selectionMode ? "Deletes the selected photos" : "Saves the photo and comment")
                 }
             }
         }
@@ -98,11 +105,14 @@ struct BottomBar: View {
                 .textFieldStyle(.roundedBorder)
                 .padding([.horizontal, .bottom])
                 .frame(minHeight: 50)
+                .accessibilityLabel("Comment")
+                .accessibilityHint("Enter a comment to save with the photo")
         } else if let title = config.title {
             Text(title)
                 .font(.headline)
                 .padding(.horizontal)
                 .padding(.vertical, 8)
+                .accessibilityAddTraits(.isHeader)
         }
     }
 }

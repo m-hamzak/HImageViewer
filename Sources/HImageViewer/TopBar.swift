@@ -19,6 +19,7 @@ struct TopBar: View {
                     .foregroundStyle(config.isGlassMode ? .white : .primary)
                     .transition(.opacity)
                     .animation(.easeInOut(duration: 0.2), value: counter)
+                    .accessibilityLabel(config.accessibilityPageLabel ?? counter)
             }
 
             // Leading / trailing controls
@@ -28,9 +29,12 @@ struct TopBar: View {
                         .font(.body.weight(.medium))
                         .foregroundStyle(config.isGlassMode ? .white : config.tintColor)
                         .padding(.leading, 4)
+                        .accessibilityHint("Exits selection mode")
                 } else {
                     CircleButton(
                         systemName: "xmark",
+                        accessibilityLabel: "Close",
+                        accessibilityHint: "Dismisses the viewer",
                         tintColor: config.tintColor,
                         isGlassMode: config.isGlassMode,
                         action: config.onDismiss
@@ -44,6 +48,8 @@ struct TopBar: View {
                         if config.showEditButton {
                             CircleButton(
                                 systemName: "pencil",
+                                accessibilityLabel: "Edit",
+                                accessibilityHint: "Opens the photo editor",
                                 tintColor: config.tintColor,
                                 isGlassMode: config.isGlassMode,
                                 action: config.onEdit
@@ -52,6 +58,8 @@ struct TopBar: View {
                         if config.showSelectButton {
                             CircleButton(
                                 systemName: "checkmark.circle",
+                                accessibilityLabel: "Select",
+                                accessibilityHint: "Enters selection mode",
                                 tintColor: config.tintColor,
                                 isGlassMode: config.isGlassMode,
                                 action: config.onSelectToggle
@@ -75,6 +83,8 @@ struct TopBarConfig {
     var selectionMode: Bool
     /// Counter text shown centered in the bar, e.g. `"2 / 5"`. `nil` hides the label.
     var pageCounterText: String?
+    /// VoiceOver label for the page counter, e.g. `"Page 2 of 5"`. Falls back to `pageCounterText` when `nil`.
+    var accessibilityPageLabel: String? = nil
     /// Accent color for buttons. Used in classic (non-glass) mode.
     var tintColor: Color = .blue
     /// `true` = iOS 26 Liquid Glass style; `false` = classic bordered style.
@@ -89,6 +99,8 @@ struct TopBarConfig {
 
 struct CircleButton: View {
     let systemName: String
+    var accessibilityLabel: String = ""
+    var accessibilityHint: String? = nil
     var tintColor: Color = .blue
     var isGlassMode: Bool = true
     let action: () -> Void
@@ -101,6 +113,8 @@ struct CircleButton: View {
                 .frame(width: 36, height: 36)
         }
         .modifier(CircleButtonBackground(tintColor: tintColor, isGlassMode: isGlassMode))
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint(accessibilityHint ?? "")
     }
 }
 

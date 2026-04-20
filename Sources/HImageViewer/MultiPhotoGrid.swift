@@ -31,10 +31,13 @@ public struct MultiPhotoGrid: View {
             spacing: 10
         ) {
             ForEach(Array(mediaItems.enumerated()), id: \.1.id) { index, item in
+                let label = MultiPhotoGrid.tileLabel(for: item, at: index)
                 ZStack(alignment: .topTrailing) {
                     thumbnailView(for: item)
                         .frame(width: itemSize, height: itemSize)
                         .cornerRadius(12)
+                        .accessibilityLabel(label)
+                        .accessibilityAddTraits(.isImage)
 
                     if selectionMode {
                         Button {
@@ -51,6 +54,9 @@ public struct MultiPhotoGrid: View {
                             )
                             .padding(4)
                         }
+                        .accessibilityLabel(label)
+                        .accessibilityValue(selectedIndices.contains(index) ? "Selected" : "Not selected")
+                        .accessibilityHint("Double-tap to toggle selection")
                     }
                 }
             }
@@ -60,6 +66,11 @@ public struct MultiPhotoGrid: View {
     }
 
     // MARK: - Helpers
+
+    /// Returns the VoiceOver label for a grid tile, e.g. `"Photo 1"` or `"Video 3"`.
+    static func tileLabel(for item: MediaAsset, at index: Int) -> String {
+        item.isPhoto ? "Photo \(index + 1)" : "Video \(index + 1)"
+    }
 
     @ViewBuilder
     private func thumbnailView(for item: MediaAsset) -> some View {
