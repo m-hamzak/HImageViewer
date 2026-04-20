@@ -10,44 +10,49 @@ import Photos
 
 /// A SwiftUI view for displaying and managing photos and videos with editing capabilities.
 ///
-/// `HImageViewer` provides a full-screen paged viewer for displaying photos/videos with support for:
-/// - Swipe paging through all photos
-/// - Pinch-to-zoom and double-tap zoom on each photo
-/// - Multi-photo selection and deletion via grid overlay
-/// - Video playback
+/// `HImageViewer` provides a full-screen paged viewer with support for:
+/// - Swipe paging through all items
+/// - Pinch-to-zoom and double-tap zoom on photos
+/// - Native AVKit controls for videos
+/// - Multi-item selection and deletion via grid overlay
 /// - Optional comment/title display
 /// - Upload progress tracking
+/// - Drag-to-dismiss
 ///
-/// ## Usage
+/// ## Photo-only usage (legacy)
 ///
-/// ### Basic viewer:
 /// ```swift
 /// @State var assets = PhotoAsset.from(uiImages: myImages)
 /// @State var selectedVideo: URL? = nil
 ///
-/// HImageViewer(
-///     assets: $assets,
-///     selectedVideo: $selectedVideo
-/// )
+/// HImageViewer(assets: $assets, selectedVideo: $selectedVideo)
 /// ```
 ///
-/// ### Open at a specific index:
+/// ## Mixed photo + video usage
+///
 /// ```swift
-/// HImageViewer(
-///     assets: $assets,
-///     selectedVideo: $selectedVideo,
-///     initialIndex: 2
-/// )
+/// @State var items: [MediaAsset] = [
+///     .photo(PhotoAsset(image: myImage)),
+///     .video(videoURL)
+/// ]
+///
+/// HImageViewer(mediaAssets: $items)
 /// ```
 ///
-/// - Important: The viewer automatically dismisses when all assets are deleted.
-/// - Note: For upload progress tracking, pass a shared `HImageViewerUploadState` via configuration.
+/// - Important: The viewer automatically dismisses when all items are deleted.
 public struct HImageViewer: View {
 
-    // MARK: - Properties
+    // MARK: - Legacy state (photo-only init)
 
     @Binding private var assets: [PhotoAsset]
     @Binding private var selectedVideo: URL?
+
+    // MARK: - Media mode state
+
+    @Binding private var mediaAssets: [MediaAsset]
+    private let usesMediaMode: Bool
+
+    // MARK: - Shared state
 
     @State private var currentIndex: Int
     @State private var selectionMode: Bool = false
@@ -74,14 +79,23 @@ public struct HImageViewer: View {
         wasImageEdited || config.showSaveButton
     }
 
-    private var currentAsset: PhotoAsset? {
-        assets[safe: currentIndex]
+    /// Total number of items — photos+videos in media mode, photos in legacy mode.
+    private var totalCount: Int {
+        usesMediaMode ? mediaAssets.count : assets.count
     }
 
-    /// `"2 / 5"` when there are multiple assets and not in selection mode; `nil` otherwise.
+    /// The `PhotoAsset` at the current index, or `nil` if the current item is a video.
+    private var currentPhotoAsset: PhotoAsset? {
+        if usesMediaMode {
+            return mediaAssets[safe: currentIndex]?.photoAsset
+        }
+        return assets[safe: currentIndex]
+    }
+
+    /// `"2 / 5"` when there are multiple items and not in selection mode; `nil` otherwise.
     private var pageCounterText: String? {
-        guard assets.count > 1, !selectionMode else { return nil }
-        return "\(currentIndex + 1) / \(assets.count)"
+        guard totalCount > 1, !selectionMode else { return nil }
+        return "\(currentIndex + 1) / \(totalCount)"
     }
 
     /// 0→1 progress of the drag towards the dismiss threshold.
@@ -89,15 +103,56 @@ public struct HImageViewer: View {
         min(Double(max(0, dragOffset)) / Double(dismissThreshold), 1.0)
     }
 
-    // MARK: - Initialization
+    // MARK: - Initialisation (mixed photo + video)
+
+    /// Creates a new image/video viewer from a unified `MediaAsset` collection.
+    ///
+    /// Use this initialiser to display a mix of photos and videos in the same gallery.
+    ///
+    /// - Parameters:
+    ///   - mediaAssets: A binding to the array of `MediaAsset` objects to display.
+    ///     Modified when items are deleted.
+    ///   - initialIndex: The index of the item to display first. Clamped to a valid range.
+    ///     Defaults to `0`.
+    ///   - configuration: Configuration object specifying viewer behaviour. Defaults to standard
+    ///     configuration.
+    public init(
+        mediaAssets: Binding<[MediaAsset]>,
+        initialIndex: Int = 0,
+        configuration: HImageViewerConfiguration = .init()
+    ) {
+        self._mediaAssets = mediaAssets
+        self._assets = .constant([])
+        self._selectedVideo = .constant(nil)
+        self.usesMediaMode = true
+        self.config = configuration
+        self._comment = State(initialValue: configuration.initialComment ?? "")
+        self.delegate = configuration.delegate
+
+        let count = mediaAssets.wrappedValue.count
+        let clamped = count == 0 ? 0 : max(0, min(initialIndex, count - 1))
+        self._currentIndex = State(initialValue: clamped)
+
+        if let provided = configuration.uploadState {
+            uploadState = provided
+        } else {
+            uploadState = HImageViewerUploadState()
+        }
+    }
+
+    // MARK: - Initialisation (photo-only, legacy)
 
     /// Creates a new image viewer instance.
     ///
     /// - Parameters:
-    ///   - assets: A binding to the array of `PhotoAsset` objects to display. Modified when photos are deleted.
-    ///   - selectedVideo: A binding to an optional video URL. If non-nil, displays video player instead of photos.
-    ///   - initialIndex: The index of the photo to display first. Clamped to valid range. Defaults to `0`.
-    ///   - configuration: Configuration object specifying viewer behaviour. Defaults to standard configuration.
+    ///   - assets: A binding to the array of `PhotoAsset` objects to display. Modified when photos
+    ///     are deleted.
+    ///   - selectedVideo: A binding to an optional video URL. If non-nil, displays a video player
+    ///     instead of the photo gallery.
+    ///   - initialIndex: The index of the photo to display first. Clamped to a valid range.
+    ///     Defaults to `0`.
+    ///   - configuration: Configuration object specifying viewer behaviour. Defaults to standard
+    ///     configuration.
     public init(
         assets: Binding<[PhotoAsset]>,
         selectedVideo: Binding<URL?>,
@@ -106,6 +161,8 @@ public struct HImageViewer: View {
     ) {
         self._assets = assets
         self._selectedVideo = selectedVideo
+        self._mediaAssets = .constant([])
+        self.usesMediaMode = false
         self.config = configuration
         self._comment = State(initialValue: configuration.initialComment ?? "")
         self.delegate = configuration.delegate
@@ -161,8 +218,8 @@ public struct HImageViewer: View {
     private var mainComponent: some View {
         VStack(spacing: 0) {
             TopBar(config: TopBarConfig(
-                showEditButton: config.showEditButton,
-                showSelectButton: assets.count > 1,
+                showEditButton: config.showEditButton && currentPhotoAsset != nil,
+                showSelectButton: totalCount > 1,
                 selectionMode: selectionMode,
                 pageCounterText: pageCounterText,
                 onDismiss: { dismiss(); delegate?.didTapCloseButton() },
@@ -172,16 +229,19 @@ public struct HImageViewer: View {
                 },
                 onSelectToggle: { selectionMode = true },
                 onEdit: {
-                    guard let currentAsset else { return }
-                    delegate?.didTapEditButton(photo: currentAsset)
+                    guard let currentPhotoAsset else { return }
+                    delegate?.didTapEditButton(photo: currentPhotoAsset)
                 }
             ))
 
             ZStack {
                 contentView
                 if selectionMode {
+                    let gridItems: [MediaAsset] = usesMediaMode
+                        ? mediaAssets
+                        : assets.map { MediaAsset.photo($0) }
                     MultiPhotoGrid(
-                        assets: assets,
+                        mediaItems: gridItems,
                         selectedIndices: selectedIndices,
                         selectionMode: selectionMode,
                         onSelectToggle: handleSelection
@@ -194,7 +254,7 @@ public struct HImageViewer: View {
             .animation(.easeInOut(duration: 0.2), value: selectionMode)
 
             if !selectionMode {
-                PageDotsView(currentIndex: currentIndex, count: assets.count)
+                PageDotsView(currentIndex: currentIndex, count: totalCount)
             }
 
             BottomBar(comment: $comment, config: BottomBarConfig(
@@ -206,10 +266,11 @@ public struct HImageViewer: View {
                 onDelete: { handleDelete() }
             ))
         }
-        .onChangeCompat(of: assets[safe: currentIndex]?.image) { _ in
+        .onChangeCompat(of: currentPhotoAsset?.image) { newImage in
+            guard newImage != nil else { return }
             wasImageEdited = true
         }
-        .onChangeCompat(of: assets.count) { newCount in
+        .onChangeCompat(of: totalCount) { newCount in
             if newCount == 0 {
                 dismiss()
             } else {
@@ -217,7 +278,6 @@ public struct HImageViewer: View {
             }
         }
         .onChangeCompat(of: selectionMode) { _ in
-            // Reset any in-flight drag when entering/exiting selection mode
             withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                 dragOffset = 0
             }
@@ -232,7 +292,7 @@ public struct HImageViewer: View {
                 guard !selectionMode, uploadState.progress == nil else { return }
                 let translation = value.translation
                 // Activate only for predominantly downward drags to avoid
-                // conflicting with horizontal TabView paging
+                // conflicting with horizontal TabView paging.
                 guard translation.height > 0,
                       translation.height > abs(translation.width) * 1.5 else { return }
                 dragOffset = translation.height
@@ -259,9 +319,30 @@ public struct HImageViewer: View {
             }
     }
 
+    // MARK: - Content View
+
     @ViewBuilder
     private var contentView: some View {
-        if let videoURL = selectedVideo {
+        if usesMediaMode {
+            if !mediaAssets.isEmpty {
+                TabView(selection: $currentIndex) {
+                    ForEach(Array(mediaAssets.enumerated()), id: \.1.id) { index, item in
+                        Group {
+                            switch item.kind {
+                            case .photo(let asset):
+                                PhotoView(photo: asset, isSinglePhotoMode: true)
+                                    .padding(.horizontal)
+                            case .video(let url):
+                                VideoPlayerView(videoURL: url)
+                                    .padding()
+                            }
+                        }
+                        .tag(index)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+            }
+        } else if let videoURL = selectedVideo {
             VideoPlayerView(videoURL: videoURL)
                 .padding()
         } else if !assets.isEmpty {
@@ -289,23 +370,38 @@ public struct HImageViewer: View {
     // MARK: - Delete Handling
 
     private func handleDelete() {
-        let deletedAssets = selectedIndices
-            .filter { $0 < assets.count }
-            .compactMap { assets[safe: $0] }
-        assets.removeAll { asset in
-            deletedAssets.contains(where: { $0.id == asset.id })
-        }
-        selectedIndices.removeAll()
-        selectionMode = false
-        if !assets.isEmpty {
-            currentIndex = min(currentIndex, assets.count - 1)
+        if usesMediaMode {
+            let deletedIDs = Set(selectedIndices.compactMap { mediaAssets[safe: $0]?.id })
+            mediaAssets.removeAll { deletedIDs.contains($0.id) }
+            selectedIndices.removeAll()
+            selectionMode = false
+            if !mediaAssets.isEmpty {
+                currentIndex = min(currentIndex, mediaAssets.count - 1)
+            }
+        } else {
+            let deletedAssets = selectedIndices
+                .filter { $0 < assets.count }
+                .compactMap { assets[safe: $0] }
+            assets.removeAll { asset in
+                deletedAssets.contains(where: { $0.id == asset.id })
+            }
+            selectedIndices.removeAll()
+            selectionMode = false
+            if !assets.isEmpty {
+                currentIndex = min(currentIndex, assets.count - 1)
+            }
         }
     }
 
     // MARK: - Save Handling
 
     private func handleSave() {
-        delegate?.didTapSaveButton(comment: comment, photos: assets)
+        if usesMediaMode {
+            let photos = mediaAssets.compactMap(\.photoAsset)
+            delegate?.didTapSaveButton(comment: comment, photos: photos)
+        } else {
+            delegate?.didTapSaveButton(comment: comment, photos: assets)
+        }
     }
 }
 
@@ -335,5 +431,16 @@ private struct MultiPhotoPreview: View {
     }
 }
 
-#Preview("Single") { SinglePhotoPreview() }
-#Preview("Multi")  { MultiPhotoPreview() }
+private struct MixedMediaPreview: View {
+    @State private var items: [MediaAsset] = [
+        .photo(PhotoAsset(image: UIImage(systemName: "photo")!)),
+        .photo(PhotoAsset(image: UIImage(systemName: "star")!))
+    ]
+    var body: some View {
+        HImageViewer(mediaAssets: $items)
+    }
+}
+
+#Preview("Single")      { SinglePhotoPreview() }
+#Preview("Multi")       { MultiPhotoPreview() }
+#Preview("Mixed Media") { MixedMediaPreview() }

@@ -13,7 +13,6 @@ public struct PhotoView: View {
     // MARK: - Properties
 
     @State private var didFailToLoad: Bool = false
-    @State private var imageLoadTask: Task<Void, Never>?
     @ObservedObject var photo: PhotoAsset
     let isSinglePhotoMode: Bool
 
@@ -44,42 +43,14 @@ public struct PhotoView: View {
                     )
             } else {
                 Color.gray.opacity(0.1)
-                    .overlay(
-                        ProgressView()
-                    )
+                    .overlay(ProgressView())
             }
             if isSinglePhotoMode {
                 Spacer()
             }
         }
         .onAppear {
-            guard photo.image == nil && !didFailToLoad else { return }
-
-            if let url = photo.imageURL {
-                // Load image from remote URL using async/await
-                imageLoadTask = Task {
-                    do {
-                        let (data, _) = try await URLSession.shared.data(from: url)
-                        guard !Task.isCancelled else { return }
-
-                        if let loadedImage = UIImage(data: data) {
-                            await MainActor.run {
-                                self.photo.image = loadedImage
-                            }
-                        } else {
-                            await MainActor.run {
-                                self.didFailToLoad = true
-                            }
-                        }
-                    } catch {
-                        guard !Task.isCancelled else { return }
-                        await MainActor.run {
-                            self.didFailToLoad = true
-                        }
-                    }
-                }
-                return
-            }
+            guard photo.image == nil, !didFailToLoad else { return }
 
             let completion: (UIImage?) -> Void = { img in
                 if let img = img {
@@ -96,7 +67,7 @@ public struct PhotoView: View {
             }
         }
         .onDisappear {
-            imageLoadTask?.cancel()
+            photo.cancelPendingLoad()
         }
     }
 }

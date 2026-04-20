@@ -55,20 +55,36 @@ final class ViewRenderingTests: XCTestCase {
     }
 
     func test_multiPhotoGrid_renders() {
-        let assets = [
-            PhotoAsset(image: UIImage(systemName: "star")!),
-            PhotoAsset(image: UIImage(systemName: "heart")!),
-            PhotoAsset(image: UIImage(systemName: "circle")!)
+        let mediaItems: [MediaAsset] = [
+            .photo(PhotoAsset(image: UIImage(systemName: "star")!)),
+            .photo(PhotoAsset(image: UIImage(systemName: "heart")!)),
+            .photo(PhotoAsset(image: UIImage(systemName: "circle")!))
         ]
         let view = MultiPhotoGrid(
-            assets: assets,
+            mediaItems: mediaItems,
             selectedIndices: [],
             selectionMode: false,
-            onSelectToggle: { _ in }   // no-op for tests
+            onSelectToggle: { _ in }
         )
         let image = renderView(view)
 
         XCTAssertGreaterThan(image.size.width, 0, "MultiPhotoGrid should render successfully")
+    }
+
+    func test_multiPhotoGrid_withVideoItem_renders() {
+        let mediaItems: [MediaAsset] = [
+            .photo(PhotoAsset(image: UIImage(systemName: "star")!)),
+            .video(URL(string: "https://example.com/clip.mp4")!)
+        ]
+        let view = MultiPhotoGrid(
+            mediaItems: mediaItems,
+            selectedIndices: [],
+            selectionMode: false,
+            onSelectToggle: { _ in }
+        )
+        let image = renderView(view)
+
+        XCTAssertGreaterThan(image.size.width, 0, "MultiPhotoGrid with video placeholder should render")
     }
 
     // MARK: - Full Viewer Smoke Tests
@@ -97,5 +113,16 @@ final class ViewRenderingTests: XCTestCase {
         let image = renderView(view)
 
         XCTAssertGreaterThan(image.size.width, 0, "Multi-mode viewer should render successfully")
+    }
+
+    func test_hImageViewer_mediaAssets_renders() {
+        let mediaItems: [MediaAsset] = [
+            .photo(PhotoAsset(image: UIImage(systemName: "star")!)),
+            .photo(PhotoAsset(image: UIImage(systemName: "heart")!))
+        ]
+        let view = HImageViewer(mediaAssets: .constant(mediaItems))
+        let image = renderView(view)
+
+        XCTAssertGreaterThan(image.size.width, 0, "MediaAsset-based viewer should render successfully")
     }
 }
