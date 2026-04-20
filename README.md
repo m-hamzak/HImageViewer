@@ -18,10 +18,12 @@ Drop it into any SwiftUI **or** UIKit / Storyboard app with a single line of cod
 - **Multi-select mode** — tap Select to enter a checkmark grid
 - **Drag-to-reorder** — long-press any tile in the grid to reorder
 - **Delete selected items** from the grid
-- **Drag-to-dismiss** — swipe down to close
+- **Drag-to-dismiss** — swipe down to close (modal presentation only)
 - **Comment box** — optional editable text field at the bottom
 - **Upload progress overlay** — animated ring that auto-dismisses on completion
 - **Glass theme** (iOS Liquid Glass, default) and **Classic theme** (any tint color)
+- **Adaptive appearance** — canvas and controls respond to system light/dark mode automatically
+- **Smart navigation** — close button shown for modal presentation, hidden when pushed (system back button takes over); nav-bar controls (counter, Edit, Select) appear natively in the system navigation bar when pushed
 - **Remote image loading** with in-memory LRU cache
 - **PHAsset support** — load directly from the user's Photos library
 - **Full VoiceOver / accessibility** support
@@ -279,6 +281,18 @@ let config = HImageViewerConfiguration(
 
 ---
 
+## Push vs Modal behaviour
+
+`HImageViewer` automatically detects how it is presented and adjusts its UI accordingly — no configuration required.
+
+| | Modal (`.sheet` / `fullScreenCover` / `present`) | Pushed (`navigationController.push`) |
+|---|---|---|
+| Close button | ✓ Shown (✕ in top-left) | Hidden — system Back button handles dismissal |
+| Page counter & actions | Custom top bar inside the viewer | Native navigation bar (counter centred, Edit/Select trailing) |
+| Drag-to-dismiss | ✓ Active | Disabled — system swipe-back handles it |
+
+---
+
 ## UIKit & Storyboard Guide
 
 All UIKit integration uses `HImageViewerLauncher` — no `UIHostingController` setup needed.
@@ -339,6 +353,22 @@ HImageViewerLauncher.present(from: self, mediaAssets: items) { [weak self] updat
 ```swift
 HImageViewerLauncher.present(from: self, assets: photos, initialIndex: 2)
 ```
+
+---
+
+### Pushing onto a navigation stack
+
+`HImageViewerLauncher` uses `present` for modal and `push` for navigation — choose based on your app's flow:
+
+```swift
+// Modal (default)
+HImageViewerLauncher.present(from: self, assets: photos)
+
+// Pushed — viewer integrates into the existing nav bar
+HImageViewerLauncher.push(from: self, assets: photos)
+```
+
+When pushed, the viewer's page counter and Edit/Select buttons appear natively in the navigation bar. The system Back button handles dismissal; no close button is shown.
 
 ---
 
@@ -428,7 +458,8 @@ class MyViewController: UIViewController {
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `tintColor` | `Color?` | `nil` | `nil` = Liquid Glass theme. Any `Color` = classic bordered style with that accent color. |
+| `tintColor` | `Color?` | `nil` | `nil` = Liquid Glass theme, accent inherits from the host app. Any `Color` = classic bordered style with that accent color. |
+| `backgroundColor` | `Color` | `Color(.systemBackground)` | Canvas color drawn behind the photo/video content. Adapts to light/dark mode automatically. |
 | `showSaveButton` | `Bool` | `true` | Shows the Save button in the bottom bar. |
 | `showCommentBox` | `Bool` | `true` | Shows an editable comment field in the bottom bar. |
 | `showEditButton` | `Bool` | `true` | Shows the Edit button in single-photo mode. |
@@ -445,7 +476,7 @@ class MyViewController: UIViewController {
 
 ### Liquid Glass (default)
 
-Immersive dark look with frosted-glass buttons. No configuration needed.
+Frosted-glass buttons and bars. Adapts to the system light/dark mode automatically — no forced color scheme override. The accent color inherits from the host app's global `accentColor`, so buttons match the rest of your app with zero configuration.
 
 ```swift
 HImageViewerConfiguration()   // tintColor defaults to nil → Glass mode
@@ -453,12 +484,24 @@ HImageViewerConfiguration()   // tintColor defaults to nil → Glass mode
 
 ### Classic
 
-Familiar bordered button style using your brand color.
+Familiar bordered button style using any brand color. Setting `tintColor` switches the viewer into classic mode for all controls.
 
 ```swift
 HImageViewerConfiguration(tintColor: .systemPurple)
 HImageViewerConfiguration(tintColor: .orange)
 HImageViewerConfiguration(tintColor: Color("BrandBlue"))
+```
+
+### Background color
+
+The canvas behind the content defaults to `Color(.systemBackground)` (white in light mode, black in dark mode). Override it for a specific look:
+
+```swift
+// Always black — classic photo-viewer feel
+HImageViewerConfiguration(backgroundColor: .black)
+
+// Match your app's custom surface
+HImageViewerConfiguration(backgroundColor: Color("AppSurface"))
 ```
 
 ---
@@ -530,7 +573,7 @@ public protocol HImageViewerControlDelegate: AnyObject {
     /// Only fires when `showEditButton` is `true` in configuration.
     func didTapEditButton(photo: PhotoAsset)
 
-    /// Called when the viewer is dismissed via the close button or drag-to-dismiss.
+    /// Called when the viewer is dismissed via the close button or drag-to-dismiss (modal only).
     func didTapCloseButton()
 }
 ```
