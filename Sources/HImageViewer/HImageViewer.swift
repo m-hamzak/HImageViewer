@@ -171,45 +171,106 @@ public struct HImageViewer: View {
         // Sync ViewModel mutations back to caller's bindings.
         .onChangeCompat(of: vm.assets) { externalAssets = $0 }
         .onChangeCompat(of: vm.mediaAssets) { externalMediaAssets = $0 }
+        // When pushed onto a UINavigationController, populate the system nav bar
+        // instead of rendering our own top bar (see mainComponent for the other half).
+        //
+        // Note: `if` at the top level of .toolbar{} requires ToolbarContentBuilder.buildIf
+        // which is iOS 16+. We keep the top-level items unconditional and gate
+        // their @ViewBuilder content on `isInNavigationStack` instead — that `if`
+        // is plain @ViewBuilder, available on iOS 15.
+        .toolbar {
+            // Centred page counter: "2 / 5"
+            ToolbarItem(placement: .principal) {
+                if isInNavigationStack, let counter = vm.pageCounterText {
+                    Text(counter)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .accessibilityLabel(vm.accessibilityPageCounterText ?? counter)
+                }
+            }
+
+            // Trailing action buttons
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                if isInNavigationStack {
+                    // Glass mode: match the native back-button appearance (label color,
+                    // black in light / white in dark). Classic mode: use the custom tint.
+                    let buttonTint: Color = vm.config.isGlassMode
+                        ? Color(.label)
+                        : vm.config.resolvedTintColor
+                    if vm.selectionMode {
+                        Button("Cancel", action: vm.cancelSelection)
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(buttonTint)
+                            .accessibilityHint("Exits selection mode")
+                    } else {
+                        if vm.config.showEditButton && vm.currentPhotoAsset != nil {
+                            Button {
+                                guard let asset = vm.currentPhotoAsset else { return }
+                                vm.delegate?.didTapEditButton(photo: asset)
+                            } label: {
+                                Image(systemName: "pencil")
+                            }
+                            .tint(buttonTint)
+                            .accessibilityLabel("Edit")
+                            .accessibilityHint("Opens the photo editor")
+                        }
+                        if vm.totalCount > 1 {
+                            Button { vm.selectionMode = true } label: {
+                                Image(systemName: "checkmark.circle")
+                            }
+                            .tint(buttonTint)
+                            .accessibilityLabel("Select")
+                            .accessibilityHint("Enters selection mode")
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Subviews
 
     private var mainComponent: some View {
         VStack(spacing: 0) {
-            TopBar(config: TopBarConfig(
-                showCloseButton: !isInNavigationStack,
-                showEditButton: vm.config.showEditButton && vm.currentPhotoAsset != nil,
-                showSelectButton: vm.totalCount > 1,
-                selectionMode: vm.selectionMode,
-                pageCounterText: vm.pageCounterText,
-                accessibilityPageLabel: vm.accessibilityPageCounterText,
-                tintColor: vm.config.resolvedTintColor,
-                isGlassMode: vm.config.isGlassMode,
-                onDismiss: { dismiss(); vm.delegate?.didTapCloseButton() },
-                onCancelSelection: { vm.cancelSelection() },
-                onSelectToggle: { vm.selectionMode = true },
-                onEdit: {
-                    guard let asset = vm.currentPhotoAsset else { return }
-                    vm.delegate?.didTapEditButton(photo: asset)
-                }
-            ))
+            // When pushed, the system navigation bar owns the top row —
+            // controls are populated via .toolbar in body. No custom bar needed.
+            if !isInNavigationStack {
+                TopBar(config: TopBarConfig(
+                    showCloseButton: true,
+                    showEditButton: vm.config.showEditButton && vm.currentPhotoAsset != nil,
+                    showSelectButton: vm.totalCount > 1,
+                    selectionMode: vm.selectionMode,
+                    pageCounterText: vm.pageCounterText,
+                    accessibilityPageLabel: vm.accessibilityPageCounterText,
+                    tintColor: vm.config.resolvedTintColor,
+                    isGlassMode: vm.config.isGlassMode,
+                    onDismiss: { dismiss(); vm.delegate?.didTapCloseButton() },
+                    onCancelSelection: { vm.cancelSelection() },
+                    onSelectToggle: { vm.selectionMode = true },
+                    onEdit: {
+                        guard let asset = vm.currentPhotoAsset else { return }
+                        vm.delegate?.didTapEditButton(photo: asset)
+                    }
+                ))
+            }
 
             ZStack {
-                contentView
                 if vm.selectionMode {
                     let gridItems: [MediaAsset] = vm.usesMediaMode
                         ? vm.mediaAssets
                         : vm.assets.map { MediaAsset.photo($0) }
-                    MultiPhotoGrid(
-                        mediaItems: gridItems,
-                        selectedIndices: vm.selectedIndices,
-                        selectionMode: vm.selectionMode,
-                        onSelectToggle: { vm.handleSelection($0) },
-                        onReorder: { from, to in vm.reorderItems(from: from, to: to) }
-                    )
-                    .background(.regularMaterial)
+                    ScrollView {
+                        MultiPhotoGrid(
+                            mediaItems: gridItems,
+                            selectedIndices: vm.selectedIndices,
+                            selectionMode: vm.selectionMode,
+                            onSelectToggle: { vm.handleSelection($0) },
+                            onReorder: { from, to in vm.reorderItems(from: from, to: to) }
+                        )
+                    }
                     .transition(.opacity)
+                } else {
+                    contentView
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

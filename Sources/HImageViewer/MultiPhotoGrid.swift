@@ -43,29 +43,32 @@ struct MultiPhotoGrid: View {
                     thumbnailView(for: item)
                         .frame(width: itemSize, height: itemSize)
                         .cornerRadius(12)
-                        .accessibilityLabel(label)
-                        .accessibilityAddTraits(.isImage)
 
                     if selectionMode {
-                        Button {
-                            onSelectToggle(index)
-                        } label: {
-                            Image(
-                                systemName: selectedIndices.contains(index)
-                                    ? "checkmark.circle.fill"
-                                    : "circle"
-                            )
-                            .font(.system(size: 20))
-                            .foregroundColor(
-                                selectedIndices.contains(index) ? .blue : .gray
-                            )
-                            .padding(4)
-                        }
-                        .accessibilityLabel(label)
-                        .accessibilityValue(selectedIndices.contains(index) ? "Selected" : "Not selected")
-                        .accessibilityHint("Double-tap to toggle selection")
+                        // Visual indicator only — the tap is on the whole tile below.
+                        Image(
+                            systemName: selectedIndices.contains(index)
+                                ? "checkmark.circle.fill"
+                                : "circle"
+                        )
+                        .font(.system(size: 20))
+                        .foregroundColor(
+                            selectedIndices.contains(index) ? .blue : .white
+                        )
+                        .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                        .padding(6)
                     }
                 }
+                // The entire tile is the tap target so the user doesn't have to
+                // precisely hit the small corner circle (matches iOS Photos behaviour).
+                .contentShape(Rectangle())
+                .onTapGesture { if selectionMode { onSelectToggle(index) } }
+                .accessibilityLabel(label)
+                .accessibilityAddTraits(.isImage)
+                .accessibilityValue(selectionMode
+                    ? (selectedIndices.contains(index) ? "Selected" : "Not selected")
+                    : "")
+                .accessibilityHint(selectionMode ? "Double-tap to toggle selection" : "")
                 // Dim the tile that is currently being dragged.
                 .opacity(draggingIndex == index ? 0.5 : 1.0)
                 .animation(.easeInOut(duration: 0.15), value: draggingIndex)
