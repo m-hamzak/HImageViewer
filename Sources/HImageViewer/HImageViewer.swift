@@ -136,7 +136,10 @@ public struct HImageViewer: View {
             mainComponent
                 .offset(y: max(0, vm.dragOffset))
                 .opacity(1 - vm.dragProgress * 0.35)
-                .gesture(dragToDismissGesture)
+                // Drag-to-dismiss is a modal pattern only.
+                // When pushed onto a navigation stack the system's swipe-back
+                // gesture already handles dismissal, so we skip ours entirely.
+                .simultaneousGesture(isInNavigationStack ? nil : dragToDismissGesture)
                 .onAppear {
                     if vm.uploadState.progress == 1.0 {
                         vm.uploadState.progress = nil
