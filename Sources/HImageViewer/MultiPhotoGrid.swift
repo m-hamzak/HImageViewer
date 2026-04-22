@@ -42,7 +42,7 @@ struct MultiPhotoGrid: View {
                 ZStack(alignment: .topTrailing) {
                     thumbnailView(for: item)
                         .frame(width: itemSize, height: itemSize)
-                        .cornerRadius(12)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                     if selectionMode {
                         // Visual indicator only — the tap is on the whole tile below.

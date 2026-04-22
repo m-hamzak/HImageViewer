@@ -34,7 +34,6 @@ final class HImageViewerViewModel: ObservableObject {
     @Published var selectionMode: Bool = false
     @Published var selectedIndices: Set<Int> = []
     @Published var comment: String
-    @Published var wasImageEdited: Bool = false
     @Published var dragOffset: CGFloat = 0
 
     // MARK: - Dependencies
@@ -82,7 +81,7 @@ final class HImageViewerViewModel: ObservableObject {
 
     /// Whether the Save button should be visible.
     var shouldShowSaveButton: Bool {
-        wasImageEdited || config.showSaveButton
+        config.showSaveButton
     }
 
     /// Total number of items across both modes.

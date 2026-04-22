@@ -80,32 +80,19 @@ final class HImageViewerLogicTests: XCTestCase {
 
     // MARK: - shouldShowSaveButton
 
-    func test_shouldShowSave_wasEdited_configFalse() {
-        let config = HImageViewerConfiguration(showSaveButton: false)
-        let vm = makeVM(config: config)
-        vm.wasImageEdited = true
-        XCTAssertTrue(vm.shouldShowSaveButton,
-                      "Editing overrides showSaveButton=false")
-    }
-
-    func test_shouldShowSave_notEdited_configTrue() {
-        let config = HImageViewerConfiguration(showSaveButton: true)
-        let vm = makeVM(config: config)
-        vm.wasImageEdited = false
+    func test_shouldShowSave_configTrue_returnsTrue() {
+        let vm = makeVM(config: HImageViewerConfiguration(showSaveButton: true))
         XCTAssertTrue(vm.shouldShowSaveButton)
     }
 
-    func test_shouldShowSave_bothFalse() {
-        let config = HImageViewerConfiguration(showSaveButton: false)
-        let vm = makeVM(config: config)
-        vm.wasImageEdited = false
+    func test_shouldShowSave_configFalse_returnsFalse() {
+        let vm = makeVM(config: HImageViewerConfiguration(showSaveButton: false))
         XCTAssertFalse(vm.shouldShowSaveButton)
     }
 
-    func test_shouldShowSave_bothTrue() {
-        let config = HImageViewerConfiguration(showSaveButton: true)
-        let vm = makeVM(config: config)
-        vm.wasImageEdited = true
+    func test_shouldShowSave_default_isTrue() {
+        // Default configuration has showSaveButton = true
+        let vm = makeVM()
         XCTAssertTrue(vm.shouldShowSaveButton)
     }
 

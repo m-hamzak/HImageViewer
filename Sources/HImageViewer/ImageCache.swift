@@ -44,8 +44,9 @@ final class ImageCache: @unchecked Sendable {
         set {
             let key = url.absoluteString as NSString
             if let image = newValue {
-                // Cost approximation: width × height × 4 bytes per pixel
-                let cost = Int(image.size.width * image.size.height * 4)
+                // Cost in bytes: pixel dimensions (not point dimensions) × 4 bytes per pixel.
+                // UIImage.size is in points, so multiply by scale² to get actual pixel count.
+                let cost = Int(image.size.width * image.scale * image.size.height * image.scale * 4)
                 cache.setObject(image, forKey: key, cost: cost)
             } else {
                 cache.removeObject(forKey: key)

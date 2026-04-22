@@ -222,12 +222,12 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
         return lhs.id == rhs.id
     }
 
-    // Cancel all pending requests on deallocation
+    // Only cancel the URLSession task here — it is Sendable and safe to cancel from any thread.
+    // PHImageManager requests are cancelled in cancelPendingLoad(), which is called from
+    // PhotoView.onDisappear on the main actor. Calling PHImageManager from deinit is unsafe
+    // because deinit runs on whichever thread releases the last reference, not the main actor.
     deinit {
         urlLoadTask?.cancel()
-        if let requestID = currentRequestID {
-            PHImageManager.default().cancelImageRequest(requestID)
-        }
     }
 }
 

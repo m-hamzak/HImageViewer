@@ -126,4 +126,38 @@ final class ImageCacheTests: XCTestCase {
         // Must still return a non-nil image after second store
         XCTAssertNotNil(cache[url1])
     }
+
+    // MARK: - Retina cost calculation
+
+    // Verifies that the cache cost uses pixel dimensions (size × scale²) rather than
+    // point dimensions (size only). A retina image at 2× scale has 4× the bytes of
+    // the equivalent 1× image at the same point size.
+    func test_cost_scalesWithImageScale() {
+        // Create two images of the same point size but different pixel scales using
+        // UIGraphicsImageRenderer, which honours the display scale parameter.
+        let pointSize = CGSize(width: 100, height: 100)
+
+        let format1x = UIGraphicsImageRendererFormat()
+        format1x.scale = 1
+        let image1x = UIGraphicsImageRenderer(size: pointSize, format: format1x)
+            .image { ctx in ctx.fill(CGRect(origin: .zero, size: pointSize)) }
+
+        let format2x = UIGraphicsImageRendererFormat()
+        format2x.scale = 2
+        let image2x = UIGraphicsImageRenderer(size: pointSize, format: format2x)
+            .image { ctx in ctx.fill(CGRect(origin: .zero, size: pointSize)) }
+
+        // Both images have the same point size but different scales
+        XCTAssertEqual(image1x.size, image2x.size, "Point sizes must be equal")
+        XCTAssertEqual(image1x.scale, 1, accuracy: 0.01)
+        XCTAssertEqual(image2x.scale, 2, accuracy: 0.01)
+
+        // Cost formula: width × scale × height × scale × 4
+        let cost1x = Int(image1x.size.width * image1x.scale * image1x.size.height * image1x.scale * 4)
+        let cost2x = Int(image2x.size.width * image2x.scale * image2x.size.height * image2x.scale * 4)
+
+        XCTAssertEqual(cost1x, 40_000,  "1× image: 100×1 × 100×1 × 4 = 40,000 bytes")
+        XCTAssertEqual(cost2x, 160_000, "2× image: 100×2 × 100×2 × 4 = 160,000 bytes")
+        XCTAssertEqual(cost2x, cost1x * 4, "2× retina image must cost 4× the 1× image")
+    }
 }

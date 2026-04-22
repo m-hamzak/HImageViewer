@@ -57,6 +57,13 @@ public struct HImageViewer: View {
     /// UINavigationController rather than presented modally.
     @State private var isInNavigationStack: Bool = false
 
+    /// Screen height sourced from the active UIWindowScene — avoids the deprecated UIScreen.main.
+    private var screenHeight: CGFloat {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first?.screen.bounds.height ?? 852
+    }
+
     // MARK: - Initialisation (mixed photo + video)
 
     /// Creates a new image/video viewer from a unified `MediaAsset` collection.
@@ -156,7 +163,8 @@ public struct HImageViewer: View {
                         .animation(.easeOut(duration: 0.3), value: progress)
                         .onChangeCompat(of: progress) { newProgress in
                             guard newProgress >= 1 else { return }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            Task { @MainActor in
+                                try? await Task.sleep(nanoseconds: 300_000_000)
                                 dismiss()
                             }
                         }
@@ -291,10 +299,6 @@ public struct HImageViewer: View {
                 onDelete: { vm.handleDelete() }
             ))
         }
-        .onChangeCompat(of: vm.currentPhotoAsset?.image) { newImage in
-            guard newImage != nil else { return }
-            vm.wasImageEdited = true
-        }
         .onChangeCompat(of: vm.totalCount) { newCount in
             if newCount == 0 {
                 dismiss()
@@ -331,9 +335,10 @@ public struct HImageViewer: View {
                 if shouldDismiss {
                     vm.haptics.impact(.light)
                     withAnimation(.easeOut(duration: 0.25)) {
-                        vm.dragOffset = UIScreen.main.bounds.height
+                        vm.dragOffset = screenHeight
                     }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 200_000_000)
                         dismiss()
                         vm.delegate?.didTapCloseButton()
                     }
