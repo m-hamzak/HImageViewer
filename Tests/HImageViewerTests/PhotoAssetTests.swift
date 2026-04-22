@@ -317,4 +317,41 @@ final class PhotoAssetTests: XCTestCase {
         let ids = PhotoAsset.from(uiImages: images).map(\.id)
         XCTAssertEqual(Set(ids).count, 5)
     }
+
+    // MARK: - deinit thread safety
+
+    // Verifies that rapidly allocating and deallocating PhotoAsset (which previously
+    // called PHImageManager in deinit from an arbitrary thread) does not crash.
+    func test_deinit_doesNotCrash_underRapidAllocationAndDeallocation() {
+        for _ in 0..<50 {
+            autoreleasepool {
+                let url = URL(string: "https://example.com/rapid-\(UUID()).jpg")!
+                let asset = PhotoAsset(imageURL: url)
+                asset.loadFullImage { _ in }
+                // asset deallocates here — deinit must not touch PHImageManager
+            }
+        }
+        // Reaching this point without crashing or triggering thread-checker = pass
+    }
+
+    // MARK: - cancelPendingLoad after deinit path
+
+    // Verifies cancelPendingLoad is a safe no-op at every lifecycle stage.
+    func test_cancelPendingLoad_isAlwaysSafe() {
+        // Before any load
+        let asset1 = PhotoAsset(imageURL: URL(string: "https://example.com/a.jpg")!)
+        asset1.cancelPendingLoad()
+
+        // During a load
+        let asset2 = PhotoAsset(imageURL: URL(string: "https://example.com/b.jpg")!)
+        asset2.loadFullImage { _ in }
+        asset2.cancelPendingLoad()
+
+        // After cancel — second cancel must be a no-op
+        asset2.cancelPendingLoad()
+
+        // With a UIImage asset (no pending requests)
+        let asset3 = PhotoAsset(image: UIImage(systemName: "star")!)
+        asset3.cancelPendingLoad()
+    }
 }

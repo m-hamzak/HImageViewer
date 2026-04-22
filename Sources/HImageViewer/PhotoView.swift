@@ -35,7 +35,7 @@ public struct PhotoView: View {
             if let image = photo.image {
                 if isSinglePhotoMode {
                     ZoomableImageView(image: image)
-                        .cornerRadius(12)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .id(photo.id)
                         .accessibilityLabel("Photo")
                         .accessibilityAddTraits(.isImage)
@@ -44,7 +44,7 @@ public struct PhotoView: View {
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .cornerRadius(12)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .accessibilityLabel("Photo")
                         .accessibilityAddTraits(.isImage)
                 }
