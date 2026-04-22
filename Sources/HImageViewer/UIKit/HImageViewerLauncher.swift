@@ -67,7 +67,7 @@ public final class HImageViewerLauncher {
         viewController.present(hostingController, animated: true)
     }
 
-    // MARK: - Mixed photo + video
+    // MARK: - Mixed photo + video (modal)
 
     /// Presents the viewer with a mixed array of photos and videos.
     ///
@@ -96,12 +96,80 @@ public final class HImageViewerLauncher {
         hostingController.modalPresentationStyle = .fullScreen
         viewController.present(hostingController, animated: true)
     }
+
+    // MARK: - Photo-only (push)
+
+    /// Pushes the image viewer onto the nearest navigation controller.
+    ///
+    /// When pushed, the viewer integrates with the system navigation bar:
+    /// the page counter and action buttons (Edit, Select) appear as native
+    /// navigation bar items, and the close button is hidden — the system
+    /// Back button handles dismissal instead.
+    ///
+    /// - Parameters:
+    ///   - viewController: A view controller that is embedded in a
+    ///     `UINavigationController`. If no navigation controller is found,
+    ///     this call is a silent no-op.
+    ///   - assets: Array of photo assets to display.
+    ///   - selectedVideo: Optional video URL to display instead of photos.
+    ///   - initialIndex: The index of the photo to open first. Defaults to `0`.
+    ///   - configuration: Configuration object for customizing viewer behavior.
+    ///   - onChange: Called every time the asset array changes.
+    @MainActor public static func push(
+        from viewController: UIViewController,
+        assets: [PhotoAsset],
+        selectedVideo: URL? = nil,
+        initialIndex: Int = 0,
+        configuration: HImageViewerConfiguration = .init(),
+        onChange: (([PhotoAsset]) -> Void)? = nil
+    ) {
+        guard let nav = viewController.navigationController else { return }
+        let container = PhotoViewerContainer(
+            assets: assets,
+            selectedVideo: selectedVideo,
+            initialIndex: initialIndex,
+            configuration: configuration,
+            onChange: onChange
+        )
+        nav.pushViewController(UIHostingController(rootView: container), animated: true)
+    }
+
+    // MARK: - Mixed photo + video (push)
+
+    /// Pushes the viewer with a mixed array of photos and videos onto the nearest
+    /// navigation controller.
+    ///
+    /// - Parameters:
+    ///   - viewController: A view controller embedded in a `UINavigationController`.
+    ///     Silent no-op if no navigation controller is found.
+    ///   - mediaAssets: Array of `MediaAsset` items to display.
+    ///   - initialIndex: The index of the item to open first. Defaults to `0`.
+    ///   - configuration: Configuration object for customizing viewer behavior.
+    ///   - onChange: Called every time the media asset array changes.
+    @MainActor public static func push(
+        from viewController: UIViewController,
+        mediaAssets: [MediaAsset],
+        initialIndex: Int = 0,
+        configuration: HImageViewerConfiguration = .init(),
+        onChange: (([MediaAsset]) -> Void)? = nil
+    ) {
+        guard let nav = viewController.navigationController else { return }
+        let container = MediaViewerContainer(
+            mediaAssets: mediaAssets,
+            initialIndex: initialIndex,
+            configuration: configuration,
+            onChange: onChange
+        )
+        nav.pushViewController(UIHostingController(rootView: container), animated: true)
+    }
 }
 
-// MARK: - Private container views
+// MARK: - Internal container views
+// `internal` (not `private`) so the type is reachable from `@testable` unit tests
+// while remaining hidden from the package's public API.
 
 /// Owns the `@State` for photo-only mode and bridges mutations back via `onChange`.
-private struct PhotoViewerContainer: View {
+struct PhotoViewerContainer: View {
     @State var assets: [PhotoAsset]
     @State var selectedVideo: URL?
     let initialIndex: Int
@@ -120,7 +188,7 @@ private struct PhotoViewerContainer: View {
 }
 
 /// Owns the `@State` for media mode and bridges mutations back via `onChange`.
-private struct MediaViewerContainer: View {
+struct MediaViewerContainer: View {
     @State var mediaAssets: [MediaAsset]
     let initialIndex: Int
     let configuration: HImageViewerConfiguration
