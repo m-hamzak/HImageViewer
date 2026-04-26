@@ -20,16 +20,9 @@ final class ViewRenderingTests: XCTestCase {
 
     /// Renders a SwiftUI view to a UIImage for smoke testing.
     func renderView<V: View>(_ view: V, size: CGSize = CGSize(width: 375, height: 667)) -> UIImage {
-        // Step 1: Wrap SwiftUI view in UIKit container
         let controller = UIHostingController(rootView: view)
-
-        // Step 2: Give it a frame (simulates a screen)
         controller.view.frame = CGRect(origin: .zero, size: size)
-
-        // Step 3: Trigger SwiftUI layout
         controller.view.layoutIfNeeded()
-
-        // Step 4-5: Render to image
         let renderer = UIGraphicsImageRenderer(size: size)
         return renderer.image { _ in
             controller.view.drawHierarchy(in: controller.view.bounds, afterScreenUpdates: true)
@@ -41,16 +34,14 @@ final class ViewRenderingTests: XCTestCase {
     func test_progressRingOverlayView_renders() {
         let view = ProgressRingOverlayView(progress: 0.5, title: "Uploading")
         let image = renderView(view, size: CGSize(width: 100, height: 120))
-
-        XCTAssertGreaterThan(image.size.width, 0, "Rendered image should have non-zero width")
-        XCTAssertGreaterThan(image.size.height, 0, "Rendered image should have non-zero height")
+        XCTAssertGreaterThan(image.size.width, 0)
+        XCTAssertGreaterThan(image.size.height, 0)
     }
 
     func test_photoView_withImage_renders() {
         let photo = PhotoAsset(image: UIImage(systemName: "star")!)
         let view = PhotoView(photo: photo, isSinglePhotoMode: true)
         let image = renderView(view)
-
         XCTAssertGreaterThan(image.size.width, 0, "PhotoView should render successfully")
     }
 
@@ -67,7 +58,6 @@ final class ViewRenderingTests: XCTestCase {
             onSelectToggle: { _ in }
         )
         let image = renderView(view)
-
         XCTAssertGreaterThan(image.size.width, 0, "MultiPhotoGrid should render successfully")
     }
 
@@ -83,68 +73,61 @@ final class ViewRenderingTests: XCTestCase {
             onSelectToggle: { _ in }
         )
         let image = renderView(view)
-
         XCTAssertGreaterThan(image.size.width, 0, "MultiPhotoGrid with video placeholder should render")
     }
 
     // MARK: - Full Viewer Smoke Tests
 
-    func test_hImageViewer_singleMode_renders() {
-        let assets = [PhotoAsset(image: UIImage(systemName: "star")!)]
-        let view = HImageViewer(
-            assets: .constant(assets),
-            selectedVideo: .constant(nil)
-        )
+    func test_hImageViewer_singleItem_renders() {
+        let items: [MediaAsset] = [.photo(PhotoAsset(image: UIImage(systemName: "star")!))]
+        let view = HImageViewer(mediaAssets: .constant(items))
         let image = renderView(view)
-
-        XCTAssertGreaterThan(image.size.width, 0, "Single-mode viewer should render successfully")
+        XCTAssertGreaterThan(image.size.width, 0, "Single-item viewer should render successfully")
     }
 
-    func test_hImageViewer_multiMode_renders() {
-        let assets = [
-            PhotoAsset(image: UIImage(systemName: "star")!),
-            PhotoAsset(image: UIImage(systemName: "heart")!),
-            PhotoAsset(image: UIImage(systemName: "circle")!)
-        ]
-        let view = HImageViewer(
-            assets: .constant(assets),
-            selectedVideo: .constant(nil)
-        )
-        let image = renderView(view)
-
-        XCTAssertGreaterThan(image.size.width, 0, "Multi-mode viewer should render successfully")
-    }
-
-    func test_hImageViewer_mediaAssets_renders() {
-        let mediaItems: [MediaAsset] = [
+    func test_hImageViewer_multipleItems_renders() {
+        let items: [MediaAsset] = [
             .photo(PhotoAsset(image: UIImage(systemName: "star")!)),
-            .photo(PhotoAsset(image: UIImage(systemName: "heart")!))
+            .photo(PhotoAsset(image: UIImage(systemName: "heart")!)),
+            .photo(PhotoAsset(image: UIImage(systemName: "circle")!))
         ]
-        let view = HImageViewer(mediaAssets: .constant(mediaItems))
+        let view = HImageViewer(mediaAssets: .constant(items))
         let image = renderView(view)
+        XCTAssertGreaterThan(image.size.width, 0, "Multi-item viewer should render successfully")
+    }
 
-        XCTAssertGreaterThan(image.size.width, 0, "MediaAsset-based viewer should render successfully")
+    func test_hImageViewer_mixedMedia_renders() {
+        let items: [MediaAsset] = [
+            .photo(PhotoAsset(image: UIImage(systemName: "star")!)),
+            .video(URL(string: "https://example.com/test.mp4")!)
+        ]
+        let view = HImageViewer(mediaAssets: .constant(items))
+        let image = renderView(view)
+        XCTAssertGreaterThan(image.size.width, 0, "Mixed media viewer must render without crashing")
     }
 
     func test_hImageViewer_withTintColor_renders() {
-        let assets = [PhotoAsset(image: UIImage(systemName: "star")!)]
+        let items: [MediaAsset] = [.photo(PhotoAsset(image: UIImage(systemName: "star")!))]
         let config = HImageViewerConfiguration(tintColor: .purple)
-        let view = HImageViewer(
-            assets: .constant(assets),
-            selectedVideo: .constant(nil),
-            configuration: config
-        )
+        let view = HImageViewer(mediaAssets: .constant(items), configuration: config)
         let image = renderView(view)
-        XCTAssertGreaterThan(image.size.width, 0, "Tinted (classic) viewer must render")
+        XCTAssertGreaterThan(image.size.width, 0, "Tinted viewer must render")
     }
 
     func test_hImageViewer_emptyAssets_renders() {
-        let view = HImageViewer(
-            assets: .constant([]),
-            selectedVideo: .constant(nil)
-        )
+        let view = HImageViewer(mediaAssets: .constant([]))
         let image = renderView(view)
         XCTAssertGreaterThan(image.size.width, 0, "Viewer with empty assets must not crash")
+    }
+
+    func test_hImageViewer_initialIndex_renders() {
+        let items: [MediaAsset] = [
+            .photo(PhotoAsset(image: UIImage(systemName: "star")!)),
+            .photo(PhotoAsset(image: UIImage(systemName: "heart")!))
+        ]
+        let view = HImageViewer(mediaAssets: .constant(items), initialIndex: 1)
+        let image = renderView(view)
+        XCTAssertGreaterThan(image.size.width, 0, "Viewer opened at non-zero index must render")
     }
 
     func test_progressRingOverlayView_atZeroPercent_renders() {
@@ -157,16 +140,6 @@ final class ViewRenderingTests: XCTestCase {
         let view = ProgressRingOverlayView(progress: 1.0, title: "Done")
         let image = renderView(view, size: CGSize(width: 100, height: 100))
         XCTAssertGreaterThan(image.size.width, 0)
-    }
-
-    func test_hImageViewer_mediaAssets_withVideoPlaceholder_renders() {
-        let items: [MediaAsset] = [
-            .photo(PhotoAsset(image: UIImage(systemName: "star")!)),
-            .video(URL(string: "https://example.com/test.mp4")!)
-        ]
-        let view = HImageViewer(mediaAssets: .constant(items))
-        let image = renderView(view)
-        XCTAssertGreaterThan(image.size.width, 0, "Mixed media viewer must render without crashing")
     }
 
     func test_topBar_inSelectionMode_renders() {

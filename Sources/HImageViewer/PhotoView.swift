@@ -24,6 +24,9 @@ public struct PhotoView: View {
     var placeholderView: AnyView? = nil
     /// Custom view shown when the photo fails to load. When `nil`, a red background + warning icon is shown.
     var errorView: AnyView? = nil
+    /// Changes to this value animate the zoom back to its default state.
+    /// Pass the viewer's `currentIndex` so zoom resets when the user navigates to a different page.
+    var resetToken: Int = 0
 
     // MARK: - Body
 
@@ -34,7 +37,7 @@ public struct PhotoView: View {
             }
             if let image = photo.image {
                 if isSinglePhotoMode {
-                    ZoomableImageView(image: image)
+                    ZoomableImageView(image: image, resetToken: resetToken)
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .id(photo.id)
                         .accessibilityLabel("Photo")

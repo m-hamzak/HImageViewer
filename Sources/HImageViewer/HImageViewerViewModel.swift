@@ -14,23 +14,19 @@ import SwiftUI
 @MainActor
 final class HImageViewerViewModel: ObservableObject {
 
-    // MARK: - Item collections
+    // MARK: - Item collection
 
-    /// Photo assets in legacy (photo-only) mode.
-    @Published var assets: [PhotoAsset]
-
-    /// Mixed-media assets in media mode.
+    /// The unified media items displayed by the viewer.
     @Published var mediaAssets: [MediaAsset]
-
-    /// `true` when the viewer was created with `init(mediaAssets:)`.
-    let usesMediaMode: Bool
-
-    /// Video URL shown in legacy mode when `selectedVideo` is non-nil.
-    let selectedVideo: URL?
 
     // MARK: - View state
 
-    @Published var currentIndex: Int
+    @Published var currentIndex: Int {
+        didSet {
+            guard currentIndex != oldValue else { return }
+            delegate?.didChangePage(to: currentIndex)
+        }
+    }
     @Published var selectionMode: Bool = false
     @Published var selectedIndices: Set<Int> = []
     @Published var comment: String
@@ -48,27 +44,20 @@ final class HImageViewerViewModel: ObservableObject {
     // MARK: - Init
 
     init(
-        assets: [PhotoAsset] = [],
         mediaAssets: [MediaAsset] = [],
-        selectedVideo: URL? = nil,
-        usesMediaMode: Bool,
         initialIndex: Int = 0,
         config: HImageViewerConfiguration = .init(),
         haptics: HapticFeedbackProviding = HapticFeedbackProvider()
     ) {
-        self.assets = assets
         self.mediaAssets = mediaAssets
-        self.selectedVideo = selectedVideo
-        self.usesMediaMode = usesMediaMode
         self.config = config
         self.comment = config.initialComment ?? ""
         self.delegate = config.delegate
         self.uploadState = config.uploadState ?? HImageViewerUploadState()
         self.haptics = haptics
 
-        let count = usesMediaMode ? mediaAssets.count : assets.count
-        let clamped = count == 0 ? 0 : max(0, min(initialIndex, count - 1))
-        self.currentIndex = clamped
+        let count = mediaAssets.count
+        self.currentIndex = count == 0 ? 0 : max(0, min(initialIndex, count - 1))
     }
 
     // MARK: - Computed properties
@@ -84,17 +73,14 @@ final class HImageViewerViewModel: ObservableObject {
         config.showSaveButton
     }
 
-    /// Total number of items across both modes.
+    /// Total number of items.
     var totalCount: Int {
-        usesMediaMode ? mediaAssets.count : assets.count
+        mediaAssets.count
     }
 
     /// The `PhotoAsset` at the current page, or `nil` when viewing a video.
     var currentPhotoAsset: PhotoAsset? {
-        if usesMediaMode {
-            return mediaAssets[safe: currentIndex]?.photoAsset
-        }
-        return assets[safe: currentIndex]
+        mediaAssets[safe: currentIndex]?.photoAsset
     }
 
     /// `"2 / 5"` for the TopBar counter label; `nil` in single-item or selection mode.
@@ -138,27 +124,15 @@ final class HImageViewerViewModel: ObservableObject {
     /// Removes all currently selected items and exits selection mode.
     func handleDelete() {
         guard !selectedIndices.isEmpty else { return }
-        if usesMediaMode {
-            let deletedIDs = Set(selectedIndices.compactMap { mediaAssets[safe: $0]?.id })
-            mediaAssets.removeAll { deletedIDs.contains($0.id) }
-            selectedIndices.removeAll()
-            selectionMode = false
-            if !mediaAssets.isEmpty {
-                currentIndex = min(currentIndex, mediaAssets.count - 1)
-            }
-        } else {
-            let deletedAssets = selectedIndices
-                .filter { $0 < assets.count }
-                .compactMap { assets[safe: $0] }
-            assets.removeAll { asset in
-                deletedAssets.contains(where: { $0.id == asset.id })
-            }
-            selectedIndices.removeAll()
-            selectionMode = false
-            if !assets.isEmpty {
-                currentIndex = min(currentIndex, assets.count - 1)
-            }
+        let deletedAssets = selectedIndices.compactMap { mediaAssets[safe: $0] }
+        let deletedIDs = Set(deletedAssets.map(\.id))
+        mediaAssets.removeAll { deletedIDs.contains($0.id) }
+        selectedIndices.removeAll()
+        selectionMode = false
+        if !mediaAssets.isEmpty {
+            currentIndex = min(currentIndex, mediaAssets.count - 1)
         }
+        delegate?.didDeleteMediaAssets(deletedAssets)
         haptics.impact(.heavy)
     }
 
@@ -169,21 +143,12 @@ final class HImageViewerViewModel: ObservableObject {
     /// No-ops when either index is out of bounds or both indices are equal.
     func reorderItems(from fromIndex: Int, to toIndex: Int) {
         guard fromIndex != toIndex else { return }
-        if usesMediaMode {
-            guard fromIndex >= 0, toIndex >= 0,
-                  fromIndex < mediaAssets.count, toIndex < mediaAssets.count else { return }
-            mediaAssets.move(
-                fromOffsets: IndexSet(integer: fromIndex),
-                toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex
-            )
-        } else {
-            guard fromIndex >= 0, toIndex >= 0,
-                  fromIndex < assets.count, toIndex < assets.count else { return }
-            assets.move(
-                fromOffsets: IndexSet(integer: fromIndex),
-                toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex
-            )
-        }
+        guard fromIndex >= 0, toIndex >= 0,
+              fromIndex < mediaAssets.count, toIndex < mediaAssets.count else { return }
+        mediaAssets.move(
+            fromOffsets: IndexSet(integer: fromIndex),
+            toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex
+        )
         selectedIndices.removeAll()
     }
 
@@ -191,12 +156,8 @@ final class HImageViewerViewModel: ObservableObject {
 
     /// Notifies the delegate with the current comment and all photos.
     func handleSave() {
-        if usesMediaMode {
-            let photos = mediaAssets.compactMap(\.photoAsset)
-            delegate?.didTapSaveButton(comment: comment, photos: photos)
-        } else {
-            delegate?.didTapSaveButton(comment: comment, photos: assets)
-        }
+        let photos = mediaAssets.compactMap(\.photoAsset)
+        delegate?.didTapSaveButton(comment: comment, photos: photos)
         haptics.impact(.medium)
     }
 }

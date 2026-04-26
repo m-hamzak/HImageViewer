@@ -19,16 +19,7 @@ import Photos
 /// - Upload progress tracking
 /// - Drag-to-dismiss
 ///
-/// ## Photo-only usage (legacy)
-///
-/// ```swift
-/// @State var assets = PhotoAsset.from(uiImages: myImages)
-/// @State var selectedVideo: URL? = nil
-///
-/// HImageViewer(assets: $assets, selectedVideo: $selectedVideo)
-/// ```
-///
-/// ## Mixed photo + video usage
+/// ## Usage
 ///
 /// ```swift
 /// @State var items: [MediaAsset] = [
@@ -42,10 +33,8 @@ import Photos
 /// - Important: The viewer automatically dismisses when all items are deleted.
 public struct HImageViewer: View {
 
-    // MARK: - Caller bindings (for syncing mutations back)
+    // MARK: - Caller binding (syncs mutations back)
 
-    @Binding private var externalAssets: [PhotoAsset]
-    @Binding private var externalSelectedVideo: URL?
     @Binding private var externalMediaAssets: [MediaAsset]
 
     // MARK: - ViewModel
@@ -53,8 +42,8 @@ public struct HImageViewer: View {
     @StateObject private var vm: HImageViewerViewModel
     @Environment(\.dismiss) private var dismiss
 
-    /// Automatically `true` when the hosting controller is pushed onto a
-    /// UINavigationController rather than presented modally.
+    /// `true` when the hosting controller is pushed onto a UINavigationController
+    /// rather than presented modally.
     @State private var isInNavigationStack: Bool = false
 
     /// Screen height sourced from the active UIWindowScene — avoids the deprecated UIScreen.main.
@@ -64,61 +53,25 @@ public struct HImageViewer: View {
             .first?.screen.bounds.height ?? 852
     }
 
-    // MARK: - Initialisation (mixed photo + video)
+    // MARK: - Initialisation
 
     /// Creates a new image/video viewer from a unified `MediaAsset` collection.
     ///
-    /// Use this initialiser to display a mix of photos and videos in the same gallery.
-    ///
     /// - Parameters:
     ///   - mediaAssets: A binding to the array of `MediaAsset` objects to display.
-    ///     Modified when items are deleted.
+    ///     Modified when items are deleted or reordered.
     ///   - initialIndex: The index of the item to display first. Clamped to a valid range.
     ///     Defaults to `0`.
-    ///   - configuration: Configuration object specifying viewer behaviour. Defaults to standard
-    ///     configuration.
+    ///   - configuration: Configuration object specifying viewer behaviour. Defaults to
+    ///     standard configuration.
     public init(
         mediaAssets: Binding<[MediaAsset]>,
         initialIndex: Int = 0,
         configuration: HImageViewerConfiguration = .init()
     ) {
         self._externalMediaAssets = mediaAssets
-        self._externalAssets = .constant([])
-        self._externalSelectedVideo = .constant(nil)
         self._vm = StateObject(wrappedValue: HImageViewerViewModel(
             mediaAssets: mediaAssets.wrappedValue,
-            usesMediaMode: true,
-            initialIndex: initialIndex,
-            config: configuration
-        ))
-    }
-
-    // MARK: - Initialisation (photo-only, legacy)
-
-    /// Creates a new image viewer instance.
-    ///
-    /// - Parameters:
-    ///   - assets: A binding to the array of `PhotoAsset` objects to display. Modified when photos
-    ///     are deleted.
-    ///   - selectedVideo: A binding to an optional video URL. If non-nil, displays a video player
-    ///     instead of the photo gallery.
-    ///   - initialIndex: The index of the photo to display first. Clamped to a valid range.
-    ///     Defaults to `0`.
-    ///   - configuration: Configuration object specifying viewer behaviour. Defaults to standard
-    ///     configuration.
-    public init(
-        assets: Binding<[PhotoAsset]>,
-        selectedVideo: Binding<URL?>,
-        initialIndex: Int = 0,
-        configuration: HImageViewerConfiguration = .init()
-    ) {
-        self._externalAssets = assets
-        self._externalSelectedVideo = selectedVideo
-        self._externalMediaAssets = .constant([])
-        self._vm = StateObject(wrappedValue: HImageViewerViewModel(
-            assets: assets.wrappedValue,
-            selectedVideo: selectedVideo.wrappedValue,
-            usesMediaMode: false,
             initialIndex: initialIndex,
             config: configuration
         ))
@@ -129,7 +82,6 @@ public struct HImageViewer: View {
     public var body: some View {
         ZStack {
             // Canvas — fills behind the status bar too.
-            // Defaults to systemBackground so it adapts to light/dark mode automatically.
             vm.config.backgroundColor.ignoresSafeArea()
 
             // Invisible detector — reads the UIKit responder chain on appear
@@ -143,9 +95,6 @@ public struct HImageViewer: View {
             mainComponent
                 .offset(y: max(0, vm.dragOffset))
                 .opacity(1 - vm.dragProgress * 0.35)
-                // Drag-to-dismiss is a modal pattern only.
-                // When pushed onto a navigation stack the system's swipe-back
-                // gesture already handles dismissal, so we skip ours entirely.
                 .simultaneousGesture(isInNavigationStack ? nil : dragToDismissGesture)
                 .onAppear {
                     if vm.uploadState.progress == 1.0 {
@@ -173,21 +122,8 @@ public struct HImageViewer: View {
                 .transition(.opacity)
             }
         }
-        // Follow the system color scheme in all modes.
-        // Glass materials (.glassEffect / .ultraThinMaterial) and .primary foreground
-        // colors adapt automatically — no forced dark override needed.
-        // Sync ViewModel mutations back to caller's bindings.
-        .onChangeCompat(of: vm.assets) { externalAssets = $0 }
         .onChangeCompat(of: vm.mediaAssets) { externalMediaAssets = $0 }
-        // When pushed onto a UINavigationController, populate the system nav bar
-        // instead of rendering our own top bar (see mainComponent for the other half).
-        //
-        // Note: `if` at the top level of .toolbar{} requires ToolbarContentBuilder.buildIf
-        // which is iOS 16+. We keep the top-level items unconditional and gate
-        // their @ViewBuilder content on `isInNavigationStack` instead — that `if`
-        // is plain @ViewBuilder, available on iOS 15.
         .toolbar {
-            // Centred page counter: "2 / 5"
             ToolbarItem(placement: .principal) {
                 if isInNavigationStack, let counter = vm.pageCounterText {
                     Text(counter)
@@ -197,11 +133,8 @@ public struct HImageViewer: View {
                 }
             }
 
-            // Trailing action buttons
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 if isInNavigationStack {
-                    // Glass mode: match the native back-button appearance (label color,
-                    // black in light / white in dark). Classic mode: use the custom tint.
                     let buttonTint: Color = vm.config.isGlassMode
                         ? Color(.label)
                         : vm.config.resolvedTintColor
@@ -240,8 +173,6 @@ public struct HImageViewer: View {
 
     private var mainComponent: some View {
         VStack(spacing: 0) {
-            // When pushed, the system navigation bar owns the top row —
-            // controls are populated via .toolbar in body. No custom bar needed.
             if !isInNavigationStack {
                 TopBar(config: TopBarConfig(
                     showCloseButton: true,
@@ -264,12 +195,9 @@ public struct HImageViewer: View {
 
             ZStack {
                 if vm.selectionMode {
-                    let gridItems: [MediaAsset] = vm.usesMediaMode
-                        ? vm.mediaAssets
-                        : vm.assets.map { MediaAsset.photo($0) }
                     ScrollView {
                         MultiPhotoGrid(
-                            mediaItems: gridItems,
+                            mediaItems: vm.mediaAssets,
                             selectedIndices: vm.selectedIndices,
                             selectionMode: vm.selectionMode,
                             onSelectToggle: { vm.handleSelection($0) },
@@ -320,8 +248,6 @@ public struct HImageViewer: View {
             .onChanged { value in
                 guard !vm.selectionMode, vm.uploadState.progress == nil else { return }
                 let translation = value.translation
-                // Activate only for predominantly downward drags to avoid
-                // conflicting with horizontal TabView paging.
                 guard translation.height > 0,
                       translation.height > abs(translation.width) * 1.5 else { return }
                 vm.dragOffset = translation.height
@@ -354,45 +280,26 @@ public struct HImageViewer: View {
 
     @ViewBuilder
     private var contentView: some View {
-        if vm.usesMediaMode {
-            if !vm.mediaAssets.isEmpty {
-                TabView(selection: $vm.currentIndex) {
-                    ForEach(Array(vm.mediaAssets.enumerated()), id: \.1.id) { index, item in
-                        Group {
-                            switch item.kind {
-                            case .photo(let asset):
-                                PhotoView(
-                                    photo: asset,
-                                    isSinglePhotoMode: true,
-                                    tintColor: vm.config.resolvedTintColor,
-                                    placeholderView: vm.config.placeholderView,
-                                    errorView: vm.config.errorView
-                                )
-                                .padding(.horizontal)
-                            case .video(let url):
-                                VideoPlayerView(videoURL: url)
-                                    .padding()
-                            }
-                        }
-                        .tag(index)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-            }
-        } else if let videoURL = vm.selectedVideo {
-            VideoPlayerView(videoURL: videoURL)
-                .padding()
-        } else if !vm.assets.isEmpty {
+        if !vm.mediaAssets.isEmpty {
             TabView(selection: $vm.currentIndex) {
-                ForEach(Array(vm.assets.enumerated()), id: \.1.id) { index, asset in
-                    PhotoView(
-                        photo: asset,
-                        isSinglePhotoMode: true,
-                        tintColor: vm.config.resolvedTintColor,
-                        placeholderView: vm.config.placeholderView,
-                        errorView: vm.config.errorView
-                    )
-                    .padding(.horizontal)
+                ForEach(Array(vm.mediaAssets.enumerated()), id: \.1.id) { index, item in
+                    Group {
+                        switch item.kind {
+                        case .photo(let asset):
+                            PhotoView(
+                                photo: asset,
+                                isSinglePhotoMode: true,
+                                tintColor: vm.config.resolvedTintColor,
+                                placeholderView: vm.config.placeholderView,
+                                errorView: vm.config.errorView,
+                                resetToken: vm.currentIndex
+                            )
+                            .padding(.horizontal)
+                        case .video(let url):
+                            VideoPlayerView(videoURL: url)
+                                .padding()
+                        }
+                    }
                     .tag(index)
                 }
             }
@@ -403,13 +310,6 @@ public struct HImageViewer: View {
 
 // MARK: - Navigation Detection
 
-/// A zero-size UIViewRepresentable that detects whether its hosting
-/// UIViewController is pushed onto a UINavigationController.
-///
-/// It walks the UIKit responder chain on `didMoveToWindow` and calls
-/// `onDetect(true)` when a navigation controller is found, `false` otherwise.
-/// This lets `HImageViewer` auto-hide its X close button when pushed, since
-/// the navigation back button already handles dismissal.
 private struct NavigationDetector: UIViewRepresentable {
 
     var onDetect: (Bool) -> Void
@@ -421,8 +321,6 @@ private struct NavigationDetector: UIViewRepresentable {
     func updateUIView(_ uiView: _DetectorView, context: Context) {
         uiView.onDetect = onDetect
     }
-
-    // MARK: - Internal UIView
 
     final class _DetectorView: UIView {
 
@@ -440,7 +338,6 @@ private struct NavigationDetector: UIViewRepresentable {
         override func didMoveToWindow() {
             super.didMoveToWindow()
             guard window != nil else { return }
-            // Defer one runloop tick so the VC hierarchy is fully assembled.
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 let isPushed = self.parentViewController?.navigationController != nil
@@ -448,7 +345,6 @@ private struct NavigationDetector: UIViewRepresentable {
             }
         }
 
-        /// Walks the UIKit responder chain to find the nearest UIViewController.
         private var parentViewController: UIViewController? {
             var responder: UIResponder? = next
             while let r = responder {
@@ -471,19 +367,17 @@ extension Array {
 // MARK: - Previews
 
 private struct SinglePhotoPreview: View {
-    @State private var assets: [PhotoAsset] = [PhotoAsset(image: UIImage(systemName: "person")!)]
-    @State private var selectedVideo: URL? = nil
-    var body: some View {
-        HImageViewer(assets: $assets, selectedVideo: $selectedVideo)
-    }
+    @State private var items: [MediaAsset] = [
+        .photo(PhotoAsset(image: UIImage(systemName: "person")!))
+    ]
+    var body: some View { HImageViewer(mediaAssets: $items) }
 }
 
 private struct MultiPhotoPreview: View {
-    @State private var assets: [PhotoAsset] = (0..<5).map { _ in PhotoAsset(image: UIImage(systemName: "person")!) }
-    @State private var selectedVideo: URL? = nil
-    var body: some View {
-        HImageViewer(assets: $assets, selectedVideo: $selectedVideo)
+    @State private var items: [MediaAsset] = (0..<5).map { _ in
+        .photo(PhotoAsset(image: UIImage(systemName: "person")!))
     }
+    var body: some View { HImageViewer(mediaAssets: $items) }
 }
 
 private struct MixedMediaPreview: View {
@@ -491,9 +385,7 @@ private struct MixedMediaPreview: View {
         .photo(PhotoAsset(image: UIImage(systemName: "photo")!)),
         .photo(PhotoAsset(image: UIImage(systemName: "star")!))
     ]
-    var body: some View {
-        HImageViewer(mediaAssets: $items)
-    }
+    var body: some View { HImageViewer(mediaAssets: $items) }
 }
 
 #Preview("Single")      { SinglePhotoPreview() }

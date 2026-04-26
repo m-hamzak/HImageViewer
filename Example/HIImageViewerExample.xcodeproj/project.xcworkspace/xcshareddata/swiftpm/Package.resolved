@@ -1,0 +1,15 @@
+{
+  "originHash" : "22d37e4a94ef16bb7d0a56ac7879f1eda5f23acbc7ce1026e097e1660772ef4a",
+  "pins" : [
+    {
+      "identity" : "himageviewer",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/m-hamzak/HImageViewer.git",
+      "state" : {
+        "branch" : "feature/code-improvements",
+        "revision" : "218c4e770e5a51c0dceeba82ee0c1cbd34d3b50a"
+      }
+    }
+  ],
+  "version" : 3
+}
