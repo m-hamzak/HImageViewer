@@ -355,7 +355,7 @@ final class PhotoAssetTests: XCTestCase {
         asset3.cancelPendingLoad()
     }
 
-    // MARK: - Caption (P2-4)
+    // MARK: - Caption
 
     func test_caption_uiImageInit_defaultIsNil() {
         let asset = PhotoAsset(image: UIImage(systemName: "photo")!)

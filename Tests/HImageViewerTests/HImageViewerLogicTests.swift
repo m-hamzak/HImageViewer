@@ -503,7 +503,7 @@ final class HImageViewerLogicTests: XCTestCase {
         XCTAssertNoThrow(vm.currentIndex = 2)
     }
 
-    // MARK: - handleShare (P2-1)
+    // MARK: - handleShare
 
     func test_handleShare_singlePhoto_setsShareItemsAndPresentsSheet() {
         let image = UIImage(systemName: "photo")!

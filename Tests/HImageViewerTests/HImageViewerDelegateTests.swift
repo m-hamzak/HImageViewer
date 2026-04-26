@@ -211,7 +211,7 @@ final class HImageViewerDelegateTests: XCTestCase {
         XCTAssertEqual(delegate.lastDeletedAssets?.count, 0)
     }
 
-    // MARK: - didTapShareButton (P2-1)
+    // MARK: - didTapShareButton
 
     func test_didTapShareButton_defaultImpl_doesNotCrash() {
         class Minimal: HImageViewerControlDelegate {}

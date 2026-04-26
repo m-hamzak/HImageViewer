@@ -174,7 +174,7 @@ final class HapticFeedbackTests: XCTestCase {
                       "Default haptics must be the real HapticFeedbackProvider")
     }
 
-    // MARK: - Page-change haptic (P2-8)
+    // MARK: - Page-change haptic
 
     func test_pageChangeHaptic_enabled_firesSelectionOnIndexChange() {
         let haptics = MockHapticFeedbackProvider()

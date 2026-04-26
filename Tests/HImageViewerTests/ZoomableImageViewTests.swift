@@ -295,7 +295,7 @@ final class ZoomableImageViewTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(ZoomDefaults.maxScale, 2.0, "maxScale should allow at least 2× zoom")
     }
 
-    // MARK: - Zoom-to-point offset math (P2-2)
+    // MARK: - Zoom-to-point offset math
 
     func test_zoomToPoint_tapAtCenter_producesZeroOffset() {
         // When the tap is exactly at the container centre, the offset to bring that
