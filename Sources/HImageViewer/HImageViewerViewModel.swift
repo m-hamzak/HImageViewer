@@ -5,6 +5,7 @@
 //  Created by Hamza Khalid on 20/04/2026.
 //
 
+import Combine
 import SwiftUI
 
 /// Holds all mutable state and business logic for `HImageViewer`.
@@ -38,6 +39,7 @@ final class HImageViewerViewModel: ObservableObject {
     let uploadState: HImageViewerUploadState
     weak var delegate: HImageViewerControlDelegate?
     let haptics: HapticFeedbackProviding
+    private var uploadStateCancellable: AnyCancellable?
 
     let dismissThreshold: CGFloat = 120
 
@@ -58,6 +60,11 @@ final class HImageViewerViewModel: ObservableObject {
 
         let count = mediaAssets.count
         self.currentIndex = count == 0 ? 0 : max(0, min(initialIndex, count - 1))
+
+        // Forward uploadState changes into the VM's own objectWillChange so
+        // HImageViewer re-renders whenever progress updates.
+        uploadStateCancellable = self.uploadState.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
     }
 
     // MARK: - Computed properties

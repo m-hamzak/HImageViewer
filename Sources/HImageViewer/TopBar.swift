@@ -57,7 +57,7 @@ struct TopBar: View {
                         }
                         if config.showSelectButton {
                             CircleButton(
-                                systemName: "checkmark.circle",
+                                systemName: "checkmark",
                                 accessibilityLabel: "Select",
                                 accessibilityHint: "Enters selection mode",
                                 tintColor: config.tintColor,
