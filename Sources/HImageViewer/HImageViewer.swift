@@ -122,6 +122,9 @@ public struct HImageViewer: View {
                 .transition(.opacity)
             }
         }
+        .sheet(isPresented: $vm.isShareSheetPresented) {
+            ShareSheetView(items: vm.shareItems)
+        }
         .onChangeCompat(of: vm.mediaAssets) { externalMediaAssets = $0 }
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -144,6 +147,14 @@ public struct HImageViewer: View {
                             .foregroundStyle(buttonTint)
                             .accessibilityHint("Exits selection mode")
                     } else {
+                        if vm.config.showShareButton && vm.currentPhotoAsset != nil {
+                            Button { vm.handleShare() } label: {
+                                Image(systemName: "square.and.arrow.up")
+                            }
+                            .tint(buttonTint)
+                            .accessibilityLabel("Share")
+                            .accessibilityHint("Shares the current photo")
+                        }
                         if vm.config.showEditButton && vm.currentPhotoAsset != nil {
                             Button {
                                 guard let asset = vm.currentPhotoAsset else { return }
@@ -172,10 +183,13 @@ public struct HImageViewer: View {
     // MARK: - Subviews
 
     private var mainComponent: some View {
-        VStack(spacing: 0) {
+        GeometryReader { geo in
+            let isLandscape = geo.size.width > geo.size.height
+            VStack(spacing: 0) {
             if !isInNavigationStack {
                 TopBar(config: TopBarConfig(
                     showCloseButton: true,
+                    showShareButton: vm.config.showShareButton && vm.currentPhotoAsset != nil,
                     showEditButton: vm.config.showEditButton && vm.currentPhotoAsset != nil,
                     showSelectButton: vm.totalCount > 1,
                     selectionMode: vm.selectionMode,
@@ -189,8 +203,9 @@ public struct HImageViewer: View {
                     onEdit: {
                         guard let asset = vm.currentPhotoAsset else { return }
                         vm.delegate?.didTapEditButton(photo: asset)
-                    }
-                ))
+                    },
+                    onShare: { vm.handleShare() }
+                ), compact: isLandscape)
             }
 
             ZStack {
@@ -201,7 +216,8 @@ public struct HImageViewer: View {
                             selectedIndices: vm.selectedIndices,
                             selectionMode: vm.selectionMode,
                             onSelectToggle: { vm.handleSelection($0) },
-                            onReorder: { from, to in vm.reorderItems(from: from, to: to) }
+                            onReorder: { from, to in vm.reorderItems(from: from, to: to) },
+                            focusIndex: vm.currentIndex
                         )
                     }
                     .transition(.opacity)
@@ -225,20 +241,21 @@ public struct HImageViewer: View {
                 isGlassMode: vm.config.isGlassMode,
                 onSave: { vm.handleSave() },
                 onDelete: { vm.handleDelete() }
-            ))
-        }
-        .onChangeCompat(of: vm.totalCount) { newCount in
-            if newCount == 0 {
-                dismiss()
-            } else {
-                vm.currentIndex = min(vm.currentIndex, newCount - 1)
+            ), compact: isLandscape)
+            } // VStack
+            .onChangeCompat(of: vm.totalCount) { newCount in
+                if newCount == 0 {
+                    dismiss()
+                } else {
+                    vm.currentIndex = min(vm.currentIndex, newCount - 1)
+                }
             }
-        }
-        .onChangeCompat(of: vm.selectionMode) { _ in
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                vm.dragOffset = 0
+            .onChangeCompat(of: vm.selectionMode) { _ in
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                    vm.dragOffset = 0
+                }
             }
-        }
+        } // GeometryReader
     }
 
     // MARK: - Drag-to-Dismiss Gesture
@@ -292,7 +309,13 @@ public struct HImageViewer: View {
                                 tintColor: vm.config.resolvedTintColor,
                                 placeholderView: vm.config.placeholderView,
                                 errorView: vm.config.errorView,
-                                resetToken: vm.currentIndex
+                                resetToken: vm.currentIndex,
+                                showContextMenu: vm.config.showContextMenu,
+                                onContextMenuShare: { image in
+                                    vm.shareItems = [image]
+                                    vm.isShareSheetPresented = true
+                                    vm.delegate?.didTapShareButton(photos: [asset])
+                                }
                             )
                             .padding(.horizontal)
                         case .video(let url):

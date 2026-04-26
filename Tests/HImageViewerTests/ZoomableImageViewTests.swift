@@ -294,4 +294,52 @@ final class ZoomableImageViewTests: XCTestCase {
     func test_maxScale_isAtLeastTwo() {
         XCTAssertGreaterThanOrEqual(ZoomDefaults.maxScale, 2.0, "maxScale should allow at least 2× zoom")
     }
+
+    // MARK: - Zoom-to-point offset math (P2-2)
+
+    func test_zoomToPoint_tapAtCenter_producesZeroOffset() {
+        // When the tap is exactly at the container centre, the offset to bring that
+        // point to the centre should be zero.
+        let container = CGSize(width: 300, height: 600)
+        let tapPoint  = CGPoint(x: container.width / 2, y: container.height / 2)
+        let scale     = ZoomDefaults.doubleTapScale
+
+        let centre    = CGPoint(x: container.width / 2, y: container.height / 2)
+        let raw       = CGSize(width:  (centre.x - tapPoint.x) * scale,
+                               height: (centre.y - tapPoint.y) * scale)
+        let result    = panClamp(raw, scale: scale, in: container)
+
+        XCTAssertEqual(result.width,  0, accuracy: 0.001, "Tap at centre → zero horizontal offset")
+        XCTAssertEqual(result.height, 0, accuracy: 0.001, "Tap at centre → zero vertical offset")
+    }
+
+    func test_zoomToPoint_tapAtTopLeft_producesPositiveOffset() {
+        // Tapping top-left should shift the image down-right (positive offsets).
+        let container = CGSize(width: 300, height: 600)
+        let tapPoint  = CGPoint(x: 0, y: 0)
+        let scale     = ZoomDefaults.doubleTapScale
+
+        let centre = CGPoint(x: container.width / 2, y: container.height / 2)
+        let raw    = CGSize(width:  (centre.x - tapPoint.x) * scale,
+                            height: (centre.y - tapPoint.y) * scale)
+        let result = panClamp(raw, scale: scale, in: container)
+
+        XCTAssertGreaterThan(result.width,  0, "Top-left tap → positive (rightward) offset")
+        XCTAssertGreaterThan(result.height, 0, "Top-left tap → positive (downward) offset")
+    }
+
+    func test_zoomToPoint_tapAtBottomRight_producesNegativeOffset() {
+        // Tapping bottom-right should shift the image up-left (negative offsets).
+        let container = CGSize(width: 300, height: 600)
+        let tapPoint  = CGPoint(x: container.width, y: container.height)
+        let scale     = ZoomDefaults.doubleTapScale
+
+        let centre = CGPoint(x: container.width / 2, y: container.height / 2)
+        let raw    = CGSize(width:  (centre.x - tapPoint.x) * scale,
+                            height: (centre.y - tapPoint.y) * scale)
+        let result = panClamp(raw, scale: scale, in: container)
+
+        XCTAssertLessThan(result.width,  0, "Bottom-right tap → negative (leftward) offset")
+        XCTAssertLessThan(result.height, 0, "Bottom-right tap → negative (upward) offset")
+    }
 }

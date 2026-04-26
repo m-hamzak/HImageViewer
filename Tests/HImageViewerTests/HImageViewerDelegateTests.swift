@@ -210,4 +210,27 @@ final class HImageViewerDelegateTests: XCTestCase {
         XCTAssertTrue(delegate.didDeleteCalled)
         XCTAssertEqual(delegate.lastDeletedAssets?.count, 0)
     }
+
+    // MARK: - didTapShareButton (P2-1)
+
+    func test_didTapShareButton_defaultImpl_doesNotCrash() {
+        class Minimal: HImageViewerControlDelegate {}
+        let delegate = Minimal()
+        XCTAssertNoThrow(delegate.didTapShareButton(photos: []))
+    }
+
+    func test_didTapShareButton_customImpl_isCalled() {
+        let delegate = MockDelegate()
+        let photo = PhotoAsset(image: UIImage(systemName: "photo")!)
+        delegate.didTapShareButton(photos: [photo])
+        XCTAssertTrue(delegate.didTapShareCalled)
+        XCTAssertEqual(delegate.lastSharePhotos?.count, 1)
+    }
+
+    func test_didTapShareButton_multiplePhotos_allReceived() {
+        let delegate = MockDelegate()
+        let photos = (0..<4).map { _ in PhotoAsset(image: UIImage(systemName: "photo")!) }
+        delegate.didTapShareButton(photos: photos)
+        XCTAssertEqual(delegate.lastSharePhotos?.count, 4)
+    }
 }

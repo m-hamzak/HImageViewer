@@ -25,6 +25,9 @@ struct MultiPhotoGrid: View {
     /// Called with `(fromIndex, toIndex)` whenever a drag-to-reorder completes.
     /// `nil` disables reordering (default, backward-compatible).
     var onReorder: ((Int, Int) -> Void)? = nil
+    /// When non-nil, the grid scrolls this item into view on appear.
+    /// Pass the viewer's `currentIndex` so entering selection mode reveals the current photo.
+    var focusIndex: Int? = nil
 
     let itemSize: CGFloat = 110
 
@@ -33,10 +36,11 @@ struct MultiPhotoGrid: View {
     // MARK: - Body
 
     var body: some View {
-        LazyVGrid(
-            columns: [GridItem(.adaptive(minimum: itemSize), spacing: 10)],
-            spacing: 10
-        ) {
+        ScrollViewReader { proxy in
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: itemSize), spacing: 10)],
+                spacing: 10
+            ) {
             ForEach(Array(mediaItems.enumerated()), id: \.1.id) { index, item in
                 let label = MultiPhotoGrid.tileLabel(for: item, at: index)
                 ZStack(alignment: .topTrailing) {
@@ -90,6 +94,16 @@ struct MultiPhotoGrid: View {
         }
         .padding(.horizontal)
         .padding(.top)
+        .onAppear {
+            guard let focus = focusIndex else { return }
+            // Use a short delay so the grid has laid out before scrolling.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    proxy.scrollTo(mediaItems[safe: focus]?.id, anchor: .center)
+                }
+            }
+        }
+        } // ScrollViewReader
     }
 
     // MARK: - Helpers

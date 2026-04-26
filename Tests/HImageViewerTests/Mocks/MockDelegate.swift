@@ -40,6 +40,11 @@ final class MockDelegate: @preconcurrency HImageViewerControlDelegate {
     var lastPageIndex: Int?
     var pageChangeCallCount: Int = 0
 
+    // MARK: - Share Tracking
+
+    var didTapShareCalled = false
+    var lastSharePhotos: [PhotoAsset]?
+
     // MARK: - Protocol Implementation
 
     func didTapSaveButton(comment: String, photos: [PhotoAsset]) {
@@ -68,6 +73,11 @@ final class MockDelegate: @preconcurrency HImageViewerControlDelegate {
         pageChangeCallCount += 1
     }
 
+    func didTapShareButton(photos: [PhotoAsset]) {
+        didTapShareCalled = true
+        lastSharePhotos = photos
+    }
+
     // MARK: - Helper Methods
 
     func reset() {
@@ -82,6 +92,8 @@ final class MockDelegate: @preconcurrency HImageViewerControlDelegate {
         didChangePageCalled = false
         lastPageIndex = nil
         pageChangeCallCount = 0
+        didTapShareCalled = false
+        lastSharePhotos = nil
     }
 }
 

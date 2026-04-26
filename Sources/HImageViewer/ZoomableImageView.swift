@@ -36,7 +36,13 @@ struct ZoomableImageView: View {
                 .offset(offset)
                 .frame(width: geometry.size.width, height: geometry.size.height)
                 .contentShape(Rectangle())
-                .onTapGesture(count: 2) { handleDoubleTap() }
+                // DoubleTapLocator overlays a UIKit recognizer that reports the
+                // precise tap point — enabling zoom-to-point rather than zoom-to-center.
+                .overlay(
+                    DoubleTapLocator { tapPoint in
+                        handleDoubleTap(at: tapPoint, in: geometry.size)
+                    }
+                )
                 .gesture(magnificationGesture)
                 // Only attach the pan drag while zoomed in — at scale 1.0 the
                 // gesture would race with TabView's horizontal page-swipe.
@@ -54,12 +60,28 @@ struct ZoomableImageView: View {
 
     // MARK: - Gesture Handlers
 
-    private func handleDoubleTap() {
+    /// Toggles zoom, targeting the tapped point so that location stays centred on screen.
+    ///
+    /// **Zoom-in math:**
+    /// After scaling by `s` around the image centre, a point at position `p` relative
+    /// to the centre maps to `p × s` in parent coordinates. To bring `tapPoint` to the
+    /// view centre we need `offset = (centre − tapPoint) × s`, then clamp within bounds.
+    private func handleDoubleTap(at tapPoint: CGPoint, in containerSize: CGSize) {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            scale = zoomToggle(current: scale)
-            if scale == ZoomDefaults.minScale {
+            let newScale = zoomToggle(current: scale)
+            if newScale == ZoomDefaults.minScale {
+                scale = ZoomDefaults.minScale
                 offset = .zero
                 lastOffset = .zero
+            } else {
+                scale = newScale
+                let centre = CGPoint(x: containerSize.width / 2, y: containerSize.height / 2)
+                let raw = CGSize(
+                    width:  (centre.x - tapPoint.x) * newScale,
+                    height: (centre.y - tapPoint.y) * newScale
+                )
+                offset = panClamp(raw, scale: newScale, in: containerSize)
+                lastOffset = offset
             }
             lastScale = scale
         }

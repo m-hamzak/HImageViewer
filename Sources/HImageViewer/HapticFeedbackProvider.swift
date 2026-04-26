@@ -16,19 +16,23 @@ import UIKit
 protocol HapticFeedbackProviding {
     /// Fires an impact feedback event with the given style.
     func impact(_ style: UIImpactFeedbackGenerator.FeedbackStyle)
+    /// Fires a selection-change feedback event (used for page navigation).
+    func selection()
 }
 
 // MARK: - Real implementation
 
-/// Default implementation that drives `UIImpactFeedbackGenerator`.
+/// Default implementation that drives `UIImpactFeedbackGenerator` and
+/// `UISelectionFeedbackGenerator`.
 ///
-/// Generators are created once per style and reused across calls, avoiding
+/// Generators are created once and reused across calls, avoiding
 /// repeated allocation and allowing the Taptic Engine to stay primed.
 final class HapticFeedbackProvider: HapticFeedbackProviding {
 
-    private let light  = UIImpactFeedbackGenerator(style: .light)
-    private let medium = UIImpactFeedbackGenerator(style: .medium)
-    private let heavy  = UIImpactFeedbackGenerator(style: .heavy)
+    private let light            = UIImpactFeedbackGenerator(style: .light)
+    private let medium           = UIImpactFeedbackGenerator(style: .medium)
+    private let heavy            = UIImpactFeedbackGenerator(style: .heavy)
+    private let selectionEngine  = UISelectionFeedbackGenerator()
 
     func impact(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
         switch style {
@@ -37,5 +41,9 @@ final class HapticFeedbackProvider: HapticFeedbackProviding {
         case .heavy:              heavy.impactOccurred()
         @unknown default:         UIImpactFeedbackGenerator(style: style).impactOccurred()
         }
+    }
+
+    func selection() {
+        selectionEngine.selectionChanged()
     }
 }

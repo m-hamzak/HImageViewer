@@ -10,6 +10,8 @@ import SwiftUI
 struct BottomBar: View {
     @Binding var comment: String
     let config: BottomBarConfig
+    /// `true` in landscape — reduces vertical padding so more image is visible.
+    var compact: Bool = false
 
     var body: some View {
         if config.isGlassMode {
@@ -29,10 +31,10 @@ struct BottomBar: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.vertical, compact ? 8 : 14)
         .glassRoundedRect(cornerRadius: 22)
         .padding(.horizontal, 16)
-        .padding(.bottom, 12)
+        .padding(.bottom, compact ? 6 : 12)
     }
 
     @ViewBuilder
@@ -94,7 +96,7 @@ struct BottomBar: View {
                     .accessibilityHint(config.selectionMode ? "Deletes the selected photos" : "Saves the photo and comment")
                 }
             }
-            .padding(.vertical, 12)
+            .padding(.vertical, compact ? 6 : 12)
         }
     }
 

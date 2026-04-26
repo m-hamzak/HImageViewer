@@ -238,4 +238,30 @@ final class HImageViewerConfigurationTests: XCTestCase {
         XCTAssertNotNil(config.errorView)
         XCTAssertFalse(config.isGlassMode)
     }
+
+    // MARK: - P2 new config flags
+
+    func test_showShareButton_defaultTrue() {
+        XCTAssertTrue(HImageViewerConfiguration().showShareButton)
+    }
+
+    func test_showShareButton_customFalse() {
+        XCTAssertFalse(HImageViewerConfiguration(showShareButton: false).showShareButton)
+    }
+
+    func test_showContextMenu_defaultTrue() {
+        XCTAssertTrue(HImageViewerConfiguration().showContextMenu)
+    }
+
+    func test_showContextMenu_customFalse() {
+        XCTAssertFalse(HImageViewerConfiguration(showContextMenu: false).showContextMenu)
+    }
+
+    func test_pageChangeHaptic_defaultFalse() {
+        XCTAssertFalse(HImageViewerConfiguration().pageChangeHaptic)
+    }
+
+    func test_pageChangeHaptic_customTrue() {
+        XCTAssertTrue(HImageViewerConfiguration(pageChangeHaptic: true).pageChangeHaptic)
+    }
 }

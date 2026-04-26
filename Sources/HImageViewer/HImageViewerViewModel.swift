@@ -22,10 +22,14 @@ final class HImageViewerViewModel: ObservableObject {
 
     // MARK: - View state
 
+    @Published var isShareSheetPresented: Bool = false
+    @Published var shareItems: [Any] = []
+
     @Published var currentIndex: Int {
         didSet {
             guard currentIndex != oldValue else { return }
             delegate?.didChangePage(to: currentIndex)
+            if config.pageChangeHaptic { haptics.selection() }
         }
     }
     @Published var selectionMode: Bool = false
@@ -166,5 +170,30 @@ final class HImageViewerViewModel: ObservableObject {
         let photos = mediaAssets.compactMap(\.photoAsset)
         delegate?.didTapSaveButton(comment: comment, photos: photos)
         haptics.impact(.medium)
+    }
+
+    // MARK: - Share
+
+    /// Gathers shareable images and presents the system share sheet.
+    ///
+    /// In selection mode every selected photo is included; otherwise only the
+    /// current photo. Falls back to all photos when the current item is a video.
+    func handleShare() {
+        let photos: [PhotoAsset]
+        if selectionMode, !selectedIndices.isEmpty {
+            photos = selectedIndices.sorted().compactMap { mediaAssets[safe: $0]?.photoAsset }
+        } else if let current = currentPhotoAsset {
+            photos = [current]
+        } else {
+            photos = mediaAssets.compactMap(\.photoAsset)
+        }
+
+        delegate?.didTapShareButton(photos: photos)
+
+        let images = photos.compactMap(\.image)
+        guard !images.isEmpty else { return }
+        shareItems = images
+        isShareSheetPresented = true
+        haptics.impact(.light)
     }
 }

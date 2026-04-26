@@ -502,4 +502,61 @@ final class HImageViewerLogicTests: XCTestCase {
         let vm = makeVM(mediaAssets: makeMediaAssets(3))
         XCTAssertNoThrow(vm.currentIndex = 2)
     }
+
+    // MARK: - handleShare (P2-1)
+
+    func test_handleShare_singlePhoto_setsShareItemsAndPresentsSheet() {
+        let image = UIImage(systemName: "photo")!
+        let asset = MediaAsset.photo(PhotoAsset(image: image))
+        let vm = makeVM(mediaAssets: [asset])
+
+        vm.handleShare()
+
+        XCTAssertTrue(vm.isShareSheetPresented, "Share sheet must be presented")
+        XCTAssertFalse(vm.shareItems.isEmpty,   "Share items must not be empty")
+    }
+
+    func test_handleShare_callsDelegate() {
+        let image = UIImage(systemName: "photo")!
+        let asset = MediaAsset.photo(PhotoAsset(image: image))
+        let delegate = MockDelegate()
+        let config = HImageViewerConfiguration(delegate: delegate)
+        let vm = makeVM(mediaAssets: [asset], config: config)
+
+        vm.handleShare()
+
+        XCTAssertTrue(delegate.didTapShareCalled, "didTapShareButton must be called on the delegate")
+        XCTAssertEqual(delegate.lastSharePhotos?.count, 1)
+    }
+
+    func test_handleShare_videoAsset_doesNotPresentSheet() {
+        // Videos have no UIImage — share sheet should not present.
+        let videoURL = URL(string: "https://example.com/video.mp4")!
+        let asset = MediaAsset.video(videoURL)
+        let vm = makeVM(mediaAssets: [asset])
+
+        vm.handleShare()
+
+        XCTAssertFalse(vm.isShareSheetPresented, "Share sheet must not present when current item is a video with no image")
+    }
+
+    func test_handleShare_selectionMode_sharesSelectedItems() {
+        let images = (0..<3).map { _ in UIImage(systemName: "photo")! }
+        let assets = images.map { MediaAsset.photo(PhotoAsset(image: $0)) }
+        let vm = makeVM(mediaAssets: assets)
+        vm.selectionMode = true
+        vm.selectedIndices = [0, 2]
+
+        vm.handleShare()
+
+        XCTAssertTrue(vm.isShareSheetPresented)
+        XCTAssertEqual(vm.shareItems.count, 2, "Only selected items should be shared")
+    }
+
+    func test_handleShare_noDelegate_doesNotCrash() {
+        let image = UIImage(systemName: "photo")!
+        let asset = MediaAsset.photo(PhotoAsset(image: image))
+        let vm = makeVM(mediaAssets: [asset])
+        XCTAssertNoThrow(vm.handleShare())
+    }
 }
