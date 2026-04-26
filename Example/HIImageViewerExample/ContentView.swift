@@ -15,8 +15,6 @@ struct ContentView: View {
                     NavigationLink("Classic Theme",      destination: ClassicThemeExample())
                     NavigationLink("Upload Progress",    destination: UploadProgressExample())
                     NavigationLink("With Delegate",      destination: DelegateExample())
-                }
-                Section("P2 Features") {
                     NavigationLink("Photo Captions",     destination: CaptionsExample())
                     NavigationLink("Haptic & Share",     destination: HapticShareExample())
                     NavigationLink("Context Menu",       destination: ContextMenuExample())

@@ -46,36 +46,74 @@ struct TopBar: View {
                 Spacer()
 
                 if !config.selectionMode {
-                    HStack(spacing: 10) {
-                        if config.showShareButton {
-                            CircleButton(
-                                systemName: "square.and.arrow.up",
-                                accessibilityLabel: "Share",
-                                accessibilityHint: "Shares the current photo",
-                                tintColor: config.tintColor,
-                                isGlassMode: config.isGlassMode,
-                                action: config.onShare
-                            )
+                    let showShare = config.showShareButton
+                    let showEdit  = config.showEditButton
+                    let showSel   = config.showSelectButton
+                    let visibleCount = [showShare, showEdit, showSel].filter { $0 }.count
+
+                    if visibleCount >= 2 {
+                        // Structured identically to CircleButton:
+                        //   icon in the label → .buttonStyle(.plain) → CircleButtonBackground
+                        // The glass is applied *outside* the label, so Menu's press state
+                        // never reaches it — same reason the other buttons have no artifact.
+                        Menu {
+                            if showShare {
+                                Button(action: config.onShare) {
+                                    Label("Share", systemImage: "square.and.arrow.up")
+                                }
+                            }
+                            if showEdit {
+                                Button(action: config.onEdit) {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                            }
+                            if showSel {
+                                Button(action: config.onSelectToggle) {
+                                    Label("Select", systemImage: "checkmark")
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(config.isGlassMode ? Color(.label) : config.tintColor)
+                                .frame(width: 36, height: 36)
                         }
-                        if config.showEditButton {
-                            CircleButton(
-                                systemName: "pencil",
-                                accessibilityLabel: "Edit",
-                                accessibilityHint: "Opens the photo editor",
-                                tintColor: config.tintColor,
-                                isGlassMode: config.isGlassMode,
-                                action: config.onEdit
-                            )
-                        }
-                        if config.showSelectButton {
-                            CircleButton(
-                                systemName: "checkmark",
-                                accessibilityLabel: "Select",
-                                accessibilityHint: "Enters selection mode",
-                                tintColor: config.tintColor,
-                                isGlassMode: config.isGlassMode,
-                                action: config.onSelectToggle
-                            )
+                        .buttonStyle(.plain)
+                        .modifier(CircleButtonBackground(tintColor: config.tintColor, isGlassMode: config.isGlassMode))
+                        .accessibilityLabel("More options")
+                        .accessibilityHint("Opens a menu with available actions")
+                    } else {
+                        HStack(spacing: 10) {
+                            if showShare {
+                                CircleButton(
+                                    systemName: "square.and.arrow.up",
+                                    accessibilityLabel: "Share",
+                                    accessibilityHint: "Shares the current photo",
+                                    tintColor: config.tintColor,
+                                    isGlassMode: config.isGlassMode,
+                                    action: config.onShare
+                                )
+                            }
+                            if showEdit {
+                                CircleButton(
+                                    systemName: "pencil",
+                                    accessibilityLabel: "Edit",
+                                    accessibilityHint: "Opens the photo editor",
+                                    tintColor: config.tintColor,
+                                    isGlassMode: config.isGlassMode,
+                                    action: config.onEdit
+                                )
+                            }
+                            if showSel {
+                                CircleButton(
+                                    systemName: "checkmark",
+                                    accessibilityLabel: "Select",
+                                    accessibilityHint: "Enters selection mode",
+                                    tintColor: config.tintColor,
+                                    isGlassMode: config.isGlassMode,
+                                    action: config.onSelectToggle
+                                )
+                            }
                         }
                     }
                 }
