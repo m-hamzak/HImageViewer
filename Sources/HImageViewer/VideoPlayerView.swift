@@ -36,7 +36,7 @@ struct VideoPlayerView: View {
             .onAppear {
                 // Skip recreation if the player is already configured for this URL
                 // (prevents redundant AVPlayerItem allocation on re-appear).
-                guard (playerHolder.player.currentItem?.asset as? AVURLAsset)?.url != videoURL else { return }
+                guard (playerHolder.player.currentItem?.asset as? AVURLAsset)?.url.standardized != videoURL.standardized else { return }
                 let item = AVPlayerItem(url: videoURL)
                 playerHolder.player.replaceCurrentItem(with: item)
                 playerHolder.player.seek(to: .zero)

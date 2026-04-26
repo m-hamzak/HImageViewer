@@ -72,7 +72,7 @@ struct MultiPhotoGrid: View {
                 .accessibilityValue(selectionMode
                     ? (selectedIndices.contains(index) ? "Selected" : "Not selected")
                     : "")
-                .accessibilityHint(selectionMode ? "Double-tap to toggle selection" : "")
+                .accessibilityHint(selectionMode ? "Tap to toggle selection" : "")
                 // Dim the tile that is currently being dragged.
                 .opacity(draggingIndex == index ? 0.5 : 1.0)
                 .animation(.easeInOut(duration: 0.15), value: draggingIndex)
