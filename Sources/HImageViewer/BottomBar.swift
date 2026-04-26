@@ -77,7 +77,7 @@ struct BottomBar: View {
     private var classicBar: some View {
         VStack(spacing: 0) {
             Divider()
-            HStack {
+            HStack(alignment: .center) {
                 classicTextSection
                 Spacer()
                 if config.showSaveButton {
@@ -89,12 +89,12 @@ struct BottomBar: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(config.tintColor)
-                    .padding(.trailing)
-                    .padding(.bottom, 16)
+                    .padding(.trailing, 16)
                     .accessibilityLabel(config.selectionMode ? "Remove selected items" : "Save photo")
                     .accessibilityHint(config.selectionMode ? "Deletes the selected photos" : "Saves the photo and comment")
                 }
             }
+            .padding(.vertical, 12)
         }
     }
 
@@ -103,15 +103,13 @@ struct BottomBar: View {
         if config.showCommentBox {
             TextField("Add a comment…", text: $comment)
                 .textFieldStyle(.roundedBorder)
-                .padding([.horizontal, .bottom])
-                .frame(minHeight: 50)
+                .padding(.horizontal, 16)
                 .accessibilityLabel("Comment")
                 .accessibilityHint("Enter a comment to save with the photo")
         } else if let title = config.title {
             Text(title)
                 .font(.headline)
-                .padding(.horizontal)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
                 .accessibilityAddTraits(.isHeader)
         }
     }

@@ -157,7 +157,7 @@ public struct HImageViewer: View {
                         }
                         if vm.totalCount > 1 {
                             Button { vm.selectionMode = true } label: {
-                                Image(systemName: "checkmark.circle")
+                                Image(systemName: "checkmark")
                             }
                             .tint(buttonTint)
                             .accessibilityLabel("Select")

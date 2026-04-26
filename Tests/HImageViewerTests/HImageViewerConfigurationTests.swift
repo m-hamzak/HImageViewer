@@ -48,13 +48,13 @@ final class HImageViewerConfigurationTests: XCTestCase {
         let uploadState = HImageViewerUploadState(progress: 0.5)
 
         let config = HImageViewerConfiguration(
-            initialComment: "Hello",
-            delegate: delegate,
-            showCommentBox: false,       // opposite of default
             showSaveButton: false,       // opposite of default
+            showCommentBox: false,       // opposite of default
             showEditButton: false,       // opposite of default
+            initialComment: "Hello",
             title: "My Title",
-            uploadState: uploadState
+            uploadState: uploadState,
+            delegate: delegate
         )
 
         XCTAssertEqual(config.initialComment, "Hello")
@@ -203,7 +203,7 @@ final class HImageViewerConfigurationTests: XCTestCase {
 
     func test_backgroundColor_tintColorAndBackgroundIndependent() {
         // Both can be customised simultaneously without interference.
-        let config = HImageViewerConfiguration(backgroundColor: Color.black, tintColor: Color.orange)
+        let config = HImageViewerConfiguration(tintColor: Color.orange, backgroundColor: Color.black)
         XCTAssertEqual(config.tintColor, Color.orange)
         XCTAssertEqual(config.backgroundColor, Color.black)
         XCTAssertFalse(config.isGlassMode)
@@ -213,15 +213,15 @@ final class HImageViewerConfigurationTests: XCTestCase {
         let delegate    = MockDelegate()
         let uploadState = HImageViewerUploadState(progress: 0.5)
         let config = HImageViewerConfiguration(
-            initialComment: "Comment",
-            delegate: delegate,
-            showCommentBox: false,
+            tintColor: Color.orange,
+            backgroundColor: Color.black,
             showSaveButton: false,
+            showCommentBox: false,
             showEditButton: false,
+            initialComment: "Comment",
             title: "My Title",
             uploadState: uploadState,
-            backgroundColor: Color.black,
-            tintColor: Color.orange,
+            delegate: delegate,
             placeholderView: AnyView(Text("Loading")),
             errorView: AnyView(Text("Error"))
         )

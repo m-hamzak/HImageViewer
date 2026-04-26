@@ -70,6 +70,22 @@ final class HImageViewerLogicTests: XCTestCase {
         XCTAssertTrue(vm.isUploading, "0.999 = still uploading")
     }
 
+    func test_uploadState_progressChange_triggersVMObjectWillChange() {
+        // Verifies that the VM forwards uploadState.objectWillChange so SwiftUI
+        // re-renders HImageViewer whenever progress updates.
+        let state = HImageViewerUploadState()
+        let vm = makeVM(config: HImageViewerConfiguration(uploadState: state))
+
+        let expectation = XCTestExpectation(description: "VM objectWillChange fires on progress update")
+        let cancellable = vm.objectWillChange.sink { expectation.fulfill() }
+
+        state.progress = 0.5
+
+        wait(for: [expectation], timeout: 1.0)
+        XCTAssertEqual(vm.uploadState.progress, 0.5)
+        _ = cancellable // retain
+    }
+
     // MARK: - shouldShowSaveButton
 
     func test_shouldShowSave_configTrue_returnsTrue() {

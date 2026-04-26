@@ -5,7 +5,7 @@ import HImageViewer
 
 struct ContentView: View {
     var body: some View {
-        NavigationStack {
+        NavigationView {
             List {
                 Section("SwiftUI") {
                     NavigationLink("Photo Gallery",     destination: PhotoGalleryExample())
@@ -22,6 +22,7 @@ struct ContentView: View {
             }
             .navigationTitle("HImageViewer")
         }
+        .navigationViewStyle(.stack)
     }
 }
 
@@ -114,10 +115,7 @@ struct GlassThemeExample: View {
         }
         .navigationTitle("Glass Theme")
         .fullScreenCover(isPresented: $isPresented) {
-            HImageViewer(
-                mediaAssets: $items,
-                configuration: HImageViewerConfiguration()   // tintColor nil → Glass mode
-            )
+            HImageViewer(mediaAssets: $items)   // tintColor nil → Glass mode (default)
         }
     }
 }
@@ -151,7 +149,7 @@ struct ClassicThemeExample: View {
 struct UploadProgressExample: View {
     @State private var items = MediaAsset.from(uiImages: [UIImage(systemName: "photo")!])
     @State private var isPresented = false
-    let uploadState = HImageViewerUploadState()
+    @StateObject private var uploadState = HImageViewerUploadState()
 
     var body: some View {
         VStack(spacing: 24) {

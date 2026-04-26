@@ -3,11 +3,11 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		3AF32F212F9E365E007F5B75 /* HImageViewer in Frameworks */ = {isa = PBXBuildFile; productRef = CC11223344556677889900AA /* HImageViewer */; };
+		3AF32F242F9E3DFC007F5B75 /* HImageViewer in Frameworks */ = {isa = PBXBuildFile; productRef = 3AF32F232F9E3DFC007F5B75 /* HImageViewer */; };
 		705ABAF03D5B462DA1F8DC20 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FC36C58C41C4A52AF701E24 /* App.swift */; };
 		8EB3A0E0881C40BC9B4AF97C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB33508D80CF4E5FAB4C2A32 /* ContentView.swift */; };
 		98A45900B1B64396874D6BC9 /* UIKitExampleViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84F67DFE92B04721A4EA967E /* UIKitExampleViewController.swift */; };
@@ -27,7 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3AF32F212F9E365E007F5B75 /* HImageViewer in Frameworks */,
+				3AF32F242F9E3DFC007F5B75 /* HImageViewer in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,7 +71,7 @@
 			);
 			name = HIImageViewerExample;
 			packageProductDependencies = (
-				CC11223344556677889900AA /* HImageViewer */,
+				3AF32F232F9E3DFC007F5B75 /* HImageViewer */,
 			);
 			productName = HIImageViewerExample;
 			productReference = A4F54549CA9B4014B988CB35 /* HIImageViewerExample.app */;
@@ -102,7 +102,7 @@
 			);
 			mainGroup = 47D439E7C9B64A5C88A49F9B /* HIImageViewerExample */;
 			packageReferences = (
-				DD11223344556677889900BB /* XCRemoteSwiftPackageReference "HImageViewer" */,
+				3AF32F222F9E3DFC007F5B75 /* XCLocalSwiftPackageReference "../../HIImageViewer" */,
 			);
 			productRefGroup = 9A8BB06C53E04A568D103651 /* Products */;
 			projectDirPath = "";
@@ -314,21 +314,16 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		DD11223344556677889900BB /* XCRemoteSwiftPackageReference "HImageViewer" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/m-hamzak/HImageViewer.git";
-			requirement = {
-				branch = "feature/code-improvements";
-				kind = branch;
-			};
+/* Begin XCLocalSwiftPackageReference section */
+		3AF32F222F9E3DFC007F5B75 /* XCLocalSwiftPackageReference "../../HIImageViewer" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../HIImageViewer;
 		};
-/* End XCRemoteSwiftPackageReference section */
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		CC11223344556677889900AA /* HImageViewer */ = {
+		3AF32F232F9E3DFC007F5B75 /* HImageViewer */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = DD11223344556677889900BB /* XCRemoteSwiftPackageReference "HImageViewer" */;
 			productName = HImageViewer;
 		};
 /* End XCSwiftPackageProductDependency section */

@@ -15,18 +15,18 @@ import SwiftUI
 /// ## Example
 /// ```swift
 /// let config = HImageViewerConfiguration(
-///     initialComment: "My vacation photos",
-///     delegate: self,
-///     showCommentBox: true,
-///     showSaveButton: true,
-///     showEditButton: false,
-///     title: "Photo Gallery",
 ///     tintColor: .purple,
+///     showSaveButton: true,
+///     showCommentBox: true,
+///     showEditButton: false,
+///     initialComment: "My vacation photos",
+///     title: "Photo Gallery",
+///     delegate: self,
 ///     placeholderView: AnyView(MyLoadingView()),
 ///     errorView: AnyView(MyErrorView())
 /// )
 ///
-/// HImageViewer(assets: $assets, selectedVideo: $video, configuration: config)
+/// HImageViewer(mediaAssets: $items, configuration: config)
 /// ```
 public struct HImageViewerConfiguration {
 
@@ -137,40 +137,40 @@ public struct HImageViewerConfiguration {
     /// Creates a new configuration with the specified options.
     ///
     /// - Parameters:
-    ///   - initialComment: Initial text for comment box (default: `nil`)
-    ///   - delegate: Delegate for user interaction callbacks (default: `nil`)
-    ///   - showCommentBox: Show editable comment field (default: `true`)
-    ///   - showSaveButton: Show Save button (default: `true`)
-    ///   - showEditButton: Show Edit button in single photo mode (default: `true`)
-    ///   - title: Static title when comment box is hidden (default: `nil`)
-    ///   - uploadState: Shared upload progress tracker (default: `nil`)
+    ///   - tintColor: Accent color. `nil` (default) = Liquid Glass theme. Any `Color` = classic bordered style.
     ///   - backgroundColor: Canvas color behind content. Defaults to `Color(.systemBackground)`
     ///     so the viewer adapts to light/dark mode automatically.
-    ///   - tintColor: Accent color. `nil` (default) = Liquid Glass theme. Any `Color` = classic bordered style.
+    ///   - showSaveButton: Show Save button (default: `true`)
+    ///   - showCommentBox: Show editable comment field (default: `true`)
+    ///   - showEditButton: Show Edit button in single photo mode (default: `true`)
+    ///   - initialComment: Initial text for comment box (default: `nil`)
+    ///   - title: Static title when comment box is hidden (default: `nil`)
+    ///   - uploadState: Shared upload progress tracker (default: `nil`)
+    ///   - delegate: Delegate for user interaction callbacks (default: `nil`)
     ///   - placeholderView: Custom view shown while an image loads (default: `nil`)
     ///   - errorView: Custom view shown when an image fails to load (default: `nil`)
     public init(
-        initialComment: String? = nil,
-        delegate: HImageViewerControlDelegate? = nil,
-        showCommentBox: Bool = true,
+        tintColor: Color? = nil,
+        backgroundColor: Color = Color(.systemBackground),
         showSaveButton: Bool = true,
+        showCommentBox: Bool = true,
         showEditButton: Bool = true,
+        initialComment: String? = nil,
         title: String? = nil,
         uploadState: HImageViewerUploadState? = nil,
-        backgroundColor: Color = Color(.systemBackground),
-        tintColor: Color? = nil,
+        delegate: HImageViewerControlDelegate? = nil,
         placeholderView: AnyView? = nil,
         errorView: AnyView? = nil
     ) {
-        self.initialComment = initialComment
-        self.delegate = delegate
-        self.showCommentBox = showCommentBox
+        self.tintColor = tintColor
+        self.backgroundColor = backgroundColor
         self.showSaveButton = showSaveButton
+        self.showCommentBox = showCommentBox
         self.showEditButton = showEditButton
+        self.initialComment = initialComment
         self.title = title
         self.uploadState = uploadState
-        self.backgroundColor = backgroundColor
-        self.tintColor = tintColor
+        self.delegate = delegate
         self.placeholderView = placeholderView
         self.errorView = errorView
     }

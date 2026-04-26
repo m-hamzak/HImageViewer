@@ -30,6 +30,7 @@ struct ZoomableImageView: View {
         GeometryReader { geometry in
             Image(uiImage: image)
                 .resizable()
+                .interpolation(.high)
                 .aspectRatio(contentMode: .fit)
                 .scaleEffect(scale)
                 .offset(offset)
