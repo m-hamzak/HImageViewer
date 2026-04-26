@@ -239,7 +239,7 @@ final class HImageViewerConfigurationTests: XCTestCase {
         XCTAssertFalse(config.isGlassMode)
     }
 
-    // MARK: - P2 new config flags
+    // MARK: - Feature flags
 
     func test_showShareButton_defaultTrue() {
         XCTAssertTrue(HImageViewerConfiguration().showShareButton)

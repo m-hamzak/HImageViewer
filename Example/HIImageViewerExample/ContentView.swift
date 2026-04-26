@@ -247,7 +247,7 @@ struct DelegateExample: View {
     }
 }
 
-// MARK: - Photo Captions (P2-4)
+// MARK: - Photo Captions
 
 struct CaptionsExample: View {
     @State private var items: [MediaAsset] = [
@@ -275,7 +275,7 @@ struct CaptionsExample: View {
     }
 }
 
-// MARK: - Haptic & Share (P2-1, P2-8)
+// MARK: - Haptic & Share
 
 struct HapticShareExample: View {
     @State private var items: [MediaAsset] = MediaAsset.from(uiImages: [
@@ -311,7 +311,7 @@ struct HapticShareExample: View {
     }
 }
 
-// MARK: - Context Menu (P2-5)
+// MARK: - Context Menu
 
 struct ContextMenuExample: View {
     @State private var items: [MediaAsset] = [
