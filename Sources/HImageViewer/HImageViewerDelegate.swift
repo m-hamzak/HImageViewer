@@ -64,6 +64,15 @@ public protocol HImageViewerControlDelegate: AnyObject {
     ///
     /// - Parameter index: The zero-based index of the newly visible item.
     func didChangePage(to index: Int)
+
+    /// Called when the user taps the Share button or chooses *Share* from the context menu.
+    ///
+    /// The viewer also presents `UIActivityViewController` automatically, but you can
+    /// use this callback to record analytics or add custom share logic.
+    ///
+    /// - Parameter photos: The photo(s) being shared. In single-photo mode this is
+    ///   always one item; in selection mode it contains every selected photo.
+    func didTapShareButton(photos: [PhotoAsset])
 }
 
 // MARK: - Default Implementations
@@ -74,4 +83,5 @@ public extension HImageViewerControlDelegate {
     func didTapEditButton(photo: PhotoAsset) {}
     func didDeleteMediaAssets(_ assets: [MediaAsset]) {}
     func didChangePage(to index: Int) {}
+    func didTapShareButton(photos: [PhotoAsset]) {}
 }

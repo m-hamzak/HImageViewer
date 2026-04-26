@@ -9,6 +9,8 @@ import SwiftUI
 
 struct TopBar: View {
     let config: TopBarConfig
+    /// `true` in landscape — reduces vertical padding so more image is visible.
+    var compact: Bool = false
 
     var body: some View {
         ZStack {
@@ -45,6 +47,16 @@ struct TopBar: View {
 
                 if !config.selectionMode {
                     HStack(spacing: 10) {
+                        if config.showShareButton {
+                            CircleButton(
+                                systemName: "square.and.arrow.up",
+                                accessibilityLabel: "Share",
+                                accessibilityHint: "Shares the current photo",
+                                tintColor: config.tintColor,
+                                isGlassMode: config.isGlassMode,
+                                action: config.onShare
+                            )
+                        }
                         if config.showEditButton {
                             CircleButton(
                                 systemName: "pencil",
@@ -70,8 +82,8 @@ struct TopBar: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.top, 12)
-        .padding(.bottom, 8)
+        .padding(.top, compact ? 4 : 12)
+        .padding(.bottom, compact ? 4 : 8)
     }
 }
 
@@ -79,6 +91,7 @@ struct TopBar: View {
 
 struct TopBarConfig {
     var showCloseButton: Bool = true
+    var showShareButton: Bool = true
     var showEditButton: Bool
     var showSelectButton: Bool
     var selectionMode: Bool
@@ -90,10 +103,11 @@ struct TopBarConfig {
     var tintColor: Color = .blue
     /// `true` = iOS 26 Liquid Glass style; `false` = classic bordered style.
     var isGlassMode: Bool = true
-    var onDismiss: () -> Void
-    var onCancelSelection: () -> Void
-    var onSelectToggle: () -> Void
-    var onEdit: () -> Void
+    var onDismiss: () -> Void = {}
+    var onCancelSelection: () -> Void = {}
+    var onSelectToggle: () -> Void = {}
+    var onEdit: () -> Void = {}
+    var onShare: () -> Void = {}
 }
 
 // MARK: - CircleButton

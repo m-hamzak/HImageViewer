@@ -50,8 +50,26 @@ public struct HImageViewerConfiguration {
     /// Whether to show the Edit button in single photo mode.
     public let showEditButton: Bool
 
+    /// Whether to show the Share button in the top bar.
+    ///
+    /// When tapped, the viewer fires `didTapShareButton` on the delegate and
+    /// presents `UIActivityViewController` for the current photo.
+    /// Defaults to `true`.
+    public let showShareButton: Bool
+
+    /// Whether a long-press on a photo shows a context menu.
+    ///
+    /// The menu offers *Copy*, *Share*, and *Save to Photos* actions.
+    /// Defaults to `true`.
+    public let showContextMenu: Bool
+
     /// Static title text displayed when `showCommentBox` is `false`.
     public let title: String?
+
+    /// When `true`, a `UISelectionFeedbackGenerator` pulse fires each time the user
+    /// swipes to a different page. Defaults to `false` so existing integrations are
+    /// unaffected; opt in to match the native Photos-app feel.
+    public let pageChangeHaptic: Bool
 
     /// Shared upload state object for tracking and displaying upload progress.
     ///
@@ -143,6 +161,9 @@ public struct HImageViewerConfiguration {
     ///   - showSaveButton: Show Save button (default: `true`)
     ///   - showCommentBox: Show editable comment field (default: `true`)
     ///   - showEditButton: Show Edit button in single photo mode (default: `true`)
+    ///   - showShareButton: Show Share button in the top bar (default: `true`)
+    ///   - showContextMenu: Show long-press context menu on photos (default: `true`)
+    ///   - pageChangeHaptic: Fire a selection haptic on every page swipe (default: `false`)
     ///   - initialComment: Initial text for comment box (default: `nil`)
     ///   - title: Static title when comment box is hidden (default: `nil`)
     ///   - uploadState: Shared upload progress tracker (default: `nil`)
@@ -155,6 +176,9 @@ public struct HImageViewerConfiguration {
         showSaveButton: Bool = true,
         showCommentBox: Bool = true,
         showEditButton: Bool = true,
+        showShareButton: Bool = true,
+        showContextMenu: Bool = true,
+        pageChangeHaptic: Bool = false,
         initialComment: String? = nil,
         title: String? = nil,
         uploadState: HImageViewerUploadState? = nil,
@@ -167,6 +191,9 @@ public struct HImageViewerConfiguration {
         self.showSaveButton = showSaveButton
         self.showCommentBox = showCommentBox
         self.showEditButton = showEditButton
+        self.showShareButton = showShareButton
+        self.showContextMenu = showContextMenu
+        self.pageChangeHaptic = pageChangeHaptic
         self.initialComment = initialComment
         self.title = title
         self.uploadState = uploadState

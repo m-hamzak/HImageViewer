@@ -49,6 +49,14 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
     @Published public var image: UIImage?
     public let imageURL: URL?
 
+    /// Optional caption displayed beneath the photo in single-photo mode.
+    ///
+    /// Pass a non-nil value to show a text label below the image:
+    /// ```swift
+    /// PhotoAsset(image: myImage, caption: "Sunset at Maldives")
+    /// ```
+    public let caption: String?
+
     // Track active requests for cancellation
     private var currentRequestID: PHImageRequestID?
     private var urlLoadTask: Task<Void, Never>?
@@ -57,39 +65,42 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
 
     /// Creates a photo asset from a Photos framework asset.
     ///
-    /// Use this initializer when working with photos from the user's photo library via `PHPickerViewController` or Photos framework.
-    ///
-    /// - Parameter phAsset: The Photos framework asset to wrap.
+    /// - Parameters:
+    ///   - phAsset: The Photos framework asset to wrap.
+    ///   - caption: Optional caption shown below the image in single-photo mode.
     ///
     /// - Note: The actual image is loaded lazily when needed via `loadThumbnail(targetSize:completion:)` or `loadFullImage(completion:)`.
-    public init(phAsset: PHAsset) {
+    public init(phAsset: PHAsset, caption: String? = nil) {
         self.phAsset = phAsset
         self.image = nil
         self.imageURL = nil
+        self.caption = caption
     }
 
     /// Creates a photo asset from a UIImage.
     ///
-    /// Use this initializer when you have an image directly available (e.g., from camera capture or generated image).
-    ///
-    /// - Parameter image: The UIImage to display.
-    public init(image: UIImage) {
+    /// - Parameters:
+    ///   - image: The UIImage to display.
+    ///   - caption: Optional caption shown below the image in single-photo mode.
+    public init(image: UIImage, caption: String? = nil) {
         self.image = image
         self.phAsset = nil
         self.imageURL = nil
+        self.caption = caption
     }
 
     /// Creates a photo asset from a remote image URL.
     ///
-    /// Use this initializer for images hosted on a server or remote location.
-    ///
-    /// - Parameter imageURL: The URL of the remote image to load.
+    /// - Parameters:
+    ///   - imageURL: The URL of the remote image to load.
+    ///   - caption: Optional caption shown below the image in single-photo mode.
     ///
     /// - Note: The image is loaded asynchronously when the viewer displays this asset.
-    public init(imageURL: URL) {
+    public init(imageURL: URL, caption: String? = nil) {
         self.imageURL = imageURL
         self.phAsset = nil
         self.image = nil
+        self.caption = caption
     }
 
     // MARK: - Image Loading

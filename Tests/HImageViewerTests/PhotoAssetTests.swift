@@ -354,4 +354,31 @@ final class PhotoAssetTests: XCTestCase {
         let asset3 = PhotoAsset(image: UIImage(systemName: "star")!)
         asset3.cancelPendingLoad()
     }
+
+    // MARK: - Caption (P2-4)
+
+    func test_caption_uiImageInit_defaultIsNil() {
+        let asset = PhotoAsset(image: UIImage(systemName: "photo")!)
+        XCTAssertNil(asset.caption, "Default caption must be nil")
+    }
+
+    func test_caption_uiImageInit_customValue() {
+        let asset = PhotoAsset(image: UIImage(systemName: "photo")!, caption: "Sunset")
+        XCTAssertEqual(asset.caption, "Sunset")
+    }
+
+    func test_caption_urlInit_defaultIsNil() {
+        let asset = PhotoAsset(imageURL: URL(string: "https://example.com/a.jpg")!)
+        XCTAssertNil(asset.caption)
+    }
+
+    func test_caption_urlInit_customValue() {
+        let asset = PhotoAsset(imageURL: URL(string: "https://example.com/a.jpg")!, caption: "Mountain view")
+        XCTAssertEqual(asset.caption, "Mountain view")
+    }
+
+    func test_caption_emptyString_isStored() {
+        let asset = PhotoAsset(image: UIImage(systemName: "photo")!, caption: "")
+        XCTAssertEqual(asset.caption, "")
+    }
 }

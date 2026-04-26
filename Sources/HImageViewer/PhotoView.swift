@@ -27,6 +27,11 @@ public struct PhotoView: View {
     /// Changes to this value animate the zoom back to its default state.
     /// Pass the viewer's `currentIndex` so zoom resets when the user navigates to a different page.
     var resetToken: Int = 0
+    /// When `true`, long-pressing a photo in single-photo mode shows a context menu
+    /// with Copy, Share, and Save to Photos actions.
+    var showContextMenu: Bool = false
+    /// Called when the user chooses Share from the context menu.
+    var onContextMenuShare: ((UIImage) -> Void)? = nil
 
     // MARK: - Body
 
@@ -43,6 +48,27 @@ public struct PhotoView: View {
                         .accessibilityLabel("Photo")
                         .accessibilityAddTraits(.isImage)
                         .accessibilityHint("Double-tap to zoom")
+                        .if(showContextMenu) { view in
+                            view.contextMenu {
+                                Button {
+                                    UIPasteboard.general.image = image
+                                } label: {
+                                    Label("Copy", systemImage: "doc.on.doc")
+                                }
+
+                                Button {
+                                    onContextMenuShare?(image)
+                                } label: {
+                                    Label("Share", systemImage: "square.and.arrow.up")
+                                }
+
+                                Button {
+                                    UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+                                } label: {
+                                    Label("Save to Photos", systemImage: "square.and.arrow.down")
+                                }
+                            }
+                        }
                 } else {
                     Image(uiImage: image)
                         .resizable()
@@ -65,6 +91,15 @@ public struct PhotoView: View {
                 } else {
                     defaultPlaceholderView
                 }
+            }
+            if isSinglePhotoMode, let caption = photo.caption {
+                Text(caption)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .accessibilityLabel("Caption: \(caption)")
             }
             if isSinglePhotoMode {
                 Spacer()

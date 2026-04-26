@@ -9,6 +9,18 @@ import SwiftUI
 
 extension View {
 
+    /// Applies the given transform only when `condition` is `true`.
+    ///
+    /// Use this to conditionally attach modifiers without breaking the modifier chain:
+    /// ```swift
+    /// view.if(showMenu) { $0.contextMenu { ... } }
+    /// ```
+    @ViewBuilder
+    func `if`<Transform: View>(_ condition: Bool,
+                               transform: (Self) -> Transform) -> some View {
+        if condition { transform(self) } else { self }
+    }
+
     /// Clips the view to a circle and applies an iOS 26 glass effect.
     /// Falls back to `ultraThinMaterial` on iOS 15–25.
     @ViewBuilder

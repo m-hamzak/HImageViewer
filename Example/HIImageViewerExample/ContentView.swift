@@ -8,16 +8,21 @@ struct ContentView: View {
         NavigationView {
             List {
                 Section("SwiftUI") {
-                    NavigationLink("Photo Gallery",     destination: PhotoGalleryExample())
-                    NavigationLink("Mixed Media",       destination: MixedMediaExample())
-                    NavigationLink("Remote Images",     destination: RemoteImagesExample())
-                    NavigationLink("Glass Theme",       destination: GlassThemeExample())
-                    NavigationLink("Classic Theme",     destination: ClassicThemeExample())
-                    NavigationLink("Upload Progress",   destination: UploadProgressExample())
-                    NavigationLink("With Delegate",     destination: DelegateExample())
+                    NavigationLink("Photo Gallery",      destination: PhotoGalleryExample())
+                    NavigationLink("Mixed Media",        destination: MixedMediaExample())
+                    NavigationLink("Remote Images",      destination: RemoteImagesExample())
+                    NavigationLink("Glass Theme",        destination: GlassThemeExample())
+                    NavigationLink("Classic Theme",      destination: ClassicThemeExample())
+                    NavigationLink("Upload Progress",    destination: UploadProgressExample())
+                    NavigationLink("With Delegate",      destination: DelegateExample())
+                }
+                Section("P2 Features") {
+                    NavigationLink("Photo Captions",     destination: CaptionsExample())
+                    NavigationLink("Haptic & Share",     destination: HapticShareExample())
+                    NavigationLink("Context Menu",       destination: ContextMenuExample())
                 }
                 Section("UIKit") {
-                    NavigationLink("UIKit Launcher",    destination: UIKitLauncherExample())
+                    NavigationLink("UIKit Launcher",     destination: UIKitLauncherExample())
                 }
             }
             .navigationTitle("HImageViewer")
@@ -203,12 +208,17 @@ final class ExampleDelegate: HImageViewerControlDelegate {
     func didChangePage(to index: Int) {
         lastAction = "Page changed to \(index)"
     }
+
+    func didTapShareButton(photos: [PhotoAsset]) {
+        lastAction = "Share tapped — \(photos.count) photo(s)"
+    }
 }
 
 struct DelegateExample: View {
     @State private var items = MediaAsset.from(uiImages: [
         UIImage(systemName: "photo")!,
-        UIImage(systemName: "star")!
+        UIImage(systemName: "star")!,
+        UIImage(systemName: "heart")!,
     ])
     @State private var isPresented = false
     @State private var lastAction = "—"
@@ -235,6 +245,103 @@ struct DelegateExample: View {
         }
         .onReceive(Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()) { _ in
             lastAction = delegate.lastAction
+        }
+    }
+}
+
+// MARK: - Photo Captions (P2-4)
+
+struct CaptionsExample: View {
+    @State private var items: [MediaAsset] = [
+        .photo(PhotoAsset(image: UIImage(systemName: "photo")!,
+                          caption: "Landscape shot — double-tap to zoom")),
+        .photo(PhotoAsset(image: UIImage(systemName: "star.fill")!,
+                          caption: "Starred favourite")),
+        .photo(PhotoAsset(image: UIImage(systemName: "heart.fill")!,
+                          caption: "Most liked photo of the week")),
+    ]
+    @State private var isPresented = false
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Text("Each photo has an individual caption\nvisible below the image.")
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Button("Open with Captions") { isPresented = true }
+                .buttonStyle(.borderedProminent)
+        }
+        .navigationTitle("Photo Captions")
+        .fullScreenCover(isPresented: $isPresented) {
+            HImageViewer(mediaAssets: $items)
+        }
+    }
+}
+
+// MARK: - Haptic & Share (P2-1, P2-8)
+
+struct HapticShareExample: View {
+    @State private var items: [MediaAsset] = MediaAsset.from(uiImages: [
+        UIImage(systemName: "photo")!,
+        UIImage(systemName: "photo.fill")!,
+        UIImage(systemName: "photo.on.rectangle")!,
+        UIImage(systemName: "photo.stack")!,
+    ])
+    @State private var isPresented = false
+
+    var body: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 8) {
+                Label("Share button in top bar", systemImage: "square.and.arrow.up")
+                Label("Selection haptic on every swipe", systemImage: "hand.tap")
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+
+            Button("Open") { isPresented = true }
+                .buttonStyle(.borderedProminent)
+        }
+        .navigationTitle("Haptic & Share")
+        .fullScreenCover(isPresented: $isPresented) {
+            HImageViewer(
+                mediaAssets: $items,
+                configuration: HImageViewerConfiguration(
+                    showShareButton: true,   // share button (also the default)
+                    pageChangeHaptic: true   // selection pulse on every page swipe
+                )
+            )
+        }
+    }
+}
+
+// MARK: - Context Menu (P2-5)
+
+struct ContextMenuExample: View {
+    @State private var items: [MediaAsset] = [
+        .photo(PhotoAsset(image: UIImage(systemName: "photo")!,
+                          caption: "Long-press for options")),
+        .photo(PhotoAsset(image: UIImage(systemName: "photo.fill")!,
+                          caption: "Copy · Share · Save to Photos")),
+        .photo(PhotoAsset(image: UIImage(systemName: "photo.stack")!,
+                          caption: "Works on every photo")),
+    ]
+    @State private var isPresented = false
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Text("Long-press any photo to Copy, Share,\nor Save to Photos.")
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Button("Open") { isPresented = true }
+                .buttonStyle(.borderedProminent)
+        }
+        .navigationTitle("Context Menu")
+        .fullScreenCover(isPresented: $isPresented) {
+            HImageViewer(
+                mediaAssets: $items,
+                configuration: HImageViewerConfiguration(
+                    showContextMenu: true   // long-press context menu (also the default)
+                )
+            )
         }
     }
 }

@@ -15,10 +15,11 @@ import UIKit
 
 // MARK: - Spy
 
-/// Records every `impact(_:)` call for test assertions.
+/// Records every `impact(_:)` and `selection()` call for test assertions.
 final class MockHapticFeedbackProvider: HapticFeedbackProviding {
     private(set) var impactCallCount: Int = 0
     private(set) var recordedStyles: [UIImpactFeedbackGenerator.FeedbackStyle] = []
+    private(set) var selectionCallCount: Int = 0
 
     var lastStyle: UIImpactFeedbackGenerator.FeedbackStyle? { recordedStyles.last }
 
@@ -27,9 +28,14 @@ final class MockHapticFeedbackProvider: HapticFeedbackProviding {
         recordedStyles.append(style)
     }
 
+    func selection() {
+        selectionCallCount += 1
+    }
+
     func reset() {
         impactCallCount = 0
         recordedStyles.removeAll()
+        selectionCallCount = 0
     }
 }
 
@@ -166,5 +172,46 @@ final class HapticFeedbackTests: XCTestCase {
         let vm = HImageViewerViewModel()
         XCTAssertTrue(vm.haptics is HapticFeedbackProvider,
                       "Default haptics must be the real HapticFeedbackProvider")
+    }
+
+    // MARK: - Page-change haptic (P2-8)
+
+    func test_pageChangeHaptic_enabled_firesSelectionOnIndexChange() {
+        let haptics = MockHapticFeedbackProvider()
+        let assets  = makeMediaAssets(3)
+        let vm = HImageViewerViewModel(
+            mediaAssets: assets,
+            config: HImageViewerConfiguration(pageChangeHaptic: true),
+            haptics: haptics
+        )
+        vm.currentIndex = 1
+        XCTAssertEqual(haptics.selectionCallCount, 1,
+                       "One selection haptic must fire when pageChangeHaptic is true")
+    }
+
+    func test_pageChangeHaptic_disabled_doesNotFireSelection() {
+        let haptics = MockHapticFeedbackProvider()
+        let assets  = makeMediaAssets(3)
+        let vm = HImageViewerViewModel(
+            mediaAssets: assets,
+            config: HImageViewerConfiguration(pageChangeHaptic: false),
+            haptics: haptics
+        )
+        vm.currentIndex = 1
+        XCTAssertEqual(haptics.selectionCallCount, 0,
+                       "No selection haptic must fire when pageChangeHaptic is false")
+    }
+
+    func test_pageChangeHaptic_sameIndex_doesNotFire() {
+        let haptics = MockHapticFeedbackProvider()
+        let assets  = makeMediaAssets(3)
+        let vm = HImageViewerViewModel(
+            mediaAssets: assets,
+            config: HImageViewerConfiguration(pageChangeHaptic: true),
+            haptics: haptics
+        )
+        vm.currentIndex = 0   // already 0 — no change
+        XCTAssertEqual(haptics.selectionCallCount, 0,
+                       "Setting currentIndex to same value must not fire haptic")
     }
 }
