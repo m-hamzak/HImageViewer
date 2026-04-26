@@ -3,6 +3,7 @@
 A lightweight, plug-and-play SwiftUI image and video viewer for iOS.  
 Drop it into any SwiftUI **or** UIKit / Storyboard app with a single line of code.
 
+[![CI](https://github.com/m-hamzak/HImageViewer/actions/workflows/ci.yml/badge.svg)](https://github.com/m-hamzak/HImageViewer/actions/workflows/ci.yml)
 ![iOS 15+](https://img.shields.io/badge/iOS-15%2B-blue)
 ![Swift 5.9+](https://img.shields.io/badge/Swift-5.9%2B-orange)
 ![SPM Compatible](https://img.shields.io/badge/SPM-compatible-brightgreen)
@@ -72,13 +73,15 @@ import SwiftUI
 import HImageViewer
 
 struct ContentView: View {
-    @State private var assets = PhotoAsset.from(uiImages: [UIImage(named: "photo")!])
+    @State private var items: [MediaAsset] = [
+        .photo(PhotoAsset(image: UIImage(named: "photo")!))
+    ]
     @State private var isPresented = false
 
     var body: some View {
         Button("Open Gallery") { isPresented = true }
-            .sheet(isPresented: $isPresented) {
-                HImageViewer(assets: $assets, selectedVideo: .constant(nil))
+            .fullScreenCover(isPresented: $isPresented) {
+                HImageViewer(mediaAssets: $items)
             }
     }
 }
@@ -92,11 +95,13 @@ import HImageViewer
 
 class MyViewController: UIViewController {
 
-    var photos = PhotoAsset.from(uiImages: [UIImage(named: "photo")!])
+    var items: [MediaAsset] = [
+        .photo(PhotoAsset(image: UIImage(named: "photo")!))
+    ]
 
     @IBAction func openTapped(_ sender: Any) {
-        HImageViewerLauncher.present(from: self, assets: photos) { [weak self] updated in
-            self?.photos = updated   // deletions and reorders sync back automatically
+        HImageViewerLauncher.present(from: self, mediaAssets: items) { [weak self] updated in
+            self?.items = updated   // deletions and reorders sync back automatically
         }
     }
 }
@@ -106,30 +111,30 @@ class MyViewController: UIViewController {
 
 ## SwiftUI Guide
 
-### Photo-only gallery
+### Photo gallery
 
 ```swift
 import SwiftUI
 import HImageViewer
 
 struct GalleryView: View {
-    @State private var assets: [PhotoAsset] = [
-        PhotoAsset(image: UIImage(named: "photo1")!),
-        PhotoAsset(image: UIImage(named: "photo2")!),
-        PhotoAsset(image: UIImage(named: "photo3")!),
+    @State private var items: [MediaAsset] = [
+        .photo(PhotoAsset(image: UIImage(named: "photo1")!)),
+        .photo(PhotoAsset(image: UIImage(named: "photo2")!)),
+        .photo(PhotoAsset(image: UIImage(named: "photo3")!)),
     ]
     @State private var isPresented = false
 
     var body: some View {
         Button("Open Gallery") { isPresented = true }
             .fullScreenCover(isPresented: $isPresented) {
-                HImageViewer(assets: $assets, selectedVideo: .constant(nil))
+                HImageViewer(mediaAssets: $items)
             }
     }
 }
 ```
 
-`assets` stays in sync — deletions and reorders inside the viewer update your array automatically.
+`items` stays in sync — deletions and reorders inside the viewer update your array automatically.
 
 ---
 
@@ -162,12 +167,13 @@ HImageViewer(mediaAssets: $items, initialIndex: 2)
 import Photos
 
 // Single asset
-let asset = PhotoAsset(phAsset: myPHAsset)
+let item = MediaAsset.photo(PhotoAsset(phAsset: myPHAsset))
 
 // From PHPickerViewController results
-let assets = PhotoAsset.from(phAssets: pickerResults.compactMap { $0.asset })
+let photoAssets = PhotoAsset.from(phAssets: pickerResults.compactMap { $0.asset })
+let items       = MediaAsset.from(photoAssets: photoAssets)
 
-HImageViewer(assets: $assets, selectedVideo: .constant(nil))
+HImageViewer(mediaAssets: $items)
 ```
 
 ---
@@ -175,7 +181,7 @@ HImageViewer(assets: $assets, selectedVideo: .constant(nil))
 ### Remote images
 
 ```swift
-let asset = PhotoAsset(imageURL: URL(string: "https://example.com/photo.jpg")!)
+let item = MediaAsset.photo(PhotoAsset(imageURL: URL(string: "https://example.com/photo.jpg")!))
 ```
 
 The viewer fetches on demand, caches in memory, shows a placeholder while loading, and an error view on failure. No extra setup required.
@@ -194,11 +200,7 @@ let config = HImageViewerConfiguration(
     delegate: self
 )
 
-HImageViewer(
-    assets: $assets,
-    selectedVideo: .constant(nil),
-    configuration: config
-)
+HImageViewer(mediaAssets: $items, configuration: config)
 ```
 
 ---
@@ -232,7 +234,7 @@ Pass the delegate via configuration:
 
 ```swift
 let config = HImageViewerConfiguration(delegate: myViewModel)
-HImageViewer(assets: $assets, selectedVideo: .constant(nil), configuration: config)
+HImageViewer(mediaAssets: $items, configuration: config)
 ```
 
 > **Note:** The viewer holds the delegate **weakly**. Make sure the object adopting the protocol is retained for the lifetime of the viewer session.
@@ -249,7 +251,7 @@ let uploadState = HImageViewerUploadState()
 let config = HImageViewerConfiguration(uploadState: uploadState)
 
 // 3. Present the viewer
-HImageViewer(assets: $assets, selectedVideo: .constant(nil), configuration: config)
+HImageViewer(mediaAssets: $items, configuration: config)
 
 // 4. Drive the ring from your upload task
 uploadState.progress = 0.0    // shows overlay
@@ -305,13 +307,13 @@ import HImageViewer
 
 class MyViewController: UIViewController {
 
-    let photos = PhotoAsset.from(uiImages: [
-        UIImage(named: "photo1")!,
-        UIImage(named: "photo2")!,
-    ])
+    let items: [MediaAsset] = [
+        .photo(PhotoAsset(image: UIImage(named: "photo1")!)),
+        .photo(PhotoAsset(image: UIImage(named: "photo2")!)),
+    ]
 
     @IBAction func openGalleryTapped(_ sender: Any) {
-        HImageViewerLauncher.present(from: self, assets: photos)
+        HImageViewerLauncher.present(from: self, mediaAssets: items)
     }
 }
 ```
@@ -320,14 +322,14 @@ class MyViewController: UIViewController {
 
 ### Syncing changes back to your data model
 
-By default the viewer shows your photos but changes are not reflected in your array.  
+By default the viewer shows your items but changes are not reflected in your array.  
 Pass the `onChange` closure to stay in sync:
 
 ```swift
-var photos = PhotoAsset.from(uiImages: myImages)
+var items: [MediaAsset] = MediaAsset.from(uiImages: myImages)
 
-HImageViewerLauncher.present(from: self, assets: photos) { [weak self] updated in
-    self?.photos = updated   // called after every delete or reorder
+HImageViewerLauncher.present(from: self, mediaAssets: items) { [weak self] updated in
+    self?.items = updated   // called after every delete or reorder
 }
 ```
 
@@ -351,7 +353,7 @@ HImageViewerLauncher.present(from: self, mediaAssets: items) { [weak self] updat
 ### Open at a specific index
 
 ```swift
-HImageViewerLauncher.present(from: self, assets: photos, initialIndex: 2)
+HImageViewerLauncher.present(from: self, mediaAssets: items, initialIndex: 2)
 ```
 
 ---
@@ -362,10 +364,10 @@ HImageViewerLauncher.present(from: self, assets: photos, initialIndex: 2)
 
 ```swift
 // Modal (default)
-HImageViewerLauncher.present(from: self, assets: photos)
+HImageViewerLauncher.present(from: self, mediaAssets: items)
 
 // Pushed — viewer integrates into the existing nav bar
-HImageViewerLauncher.push(from: self, assets: photos)
+HImageViewerLauncher.push(from: self, mediaAssets: items)
 ```
 
 When pushed, the viewer's page counter and Edit/Select buttons appear natively in the navigation bar. The system Back button handles dismissal; no close button is shown.
@@ -385,10 +387,10 @@ let config = HImageViewerConfiguration(
 
 HImageViewerLauncher.present(
     from: self,
-    assets: photos,
+    mediaAssets: items,
     configuration: config
 ) { [weak self] updated in
-    self?.photos = updated
+    self?.items = updated
 }
 ```
 
@@ -399,12 +401,14 @@ HImageViewerLauncher.present(
 ```swift
 class MyViewController: UIViewController, HImageViewerControlDelegate {
 
+    var items: [MediaAsset] = []
+
     @IBAction func openGalleryTapped(_ sender: Any) {
         let config = HImageViewerConfiguration(
             showSaveButton: true,
             delegate: self
         )
-        HImageViewerLauncher.present(from: self, assets: photos, configuration: config)
+        HImageViewerLauncher.present(from: self, mediaAssets: items, configuration: config)
     }
 
     // MARK: - HImageViewerControlDelegate
@@ -432,10 +436,11 @@ class MyViewController: UIViewController, HImageViewerControlDelegate {
 class MyViewController: UIViewController {
 
     let uploadState = HImageViewerUploadState()
+    var items: [MediaAsset] = []
 
     @IBAction func openAndUploadTapped(_ sender: Any) {
         let config = HImageViewerConfiguration(uploadState: uploadState)
-        HImageViewerLauncher.present(from: self, assets: photos, configuration: config)
+        HImageViewerLauncher.present(from: self, mediaAssets: items, configuration: config)
         startUpload()
     }
 
@@ -506,29 +511,9 @@ HImageViewerConfiguration(backgroundColor: Color("AppSurface"))
 
 ---
 
-## PhotoAsset Reference
-
-| Initializer | Use when |
-|-------------|----------|
-| `PhotoAsset(image: UIImage)` | You already have a `UIImage` in memory |
-| `PhotoAsset(phAsset: PHAsset)` | Loading from the user's Photos library |
-| `PhotoAsset(imageURL: URL)` | Fetching from a remote server |
-
-### Batch helpers
-
-```swift
-// [UIImage] → [PhotoAsset]
-let assets = PhotoAsset.from(uiImages: [img1, img2, img3])
-
-// [PHAsset] → [PhotoAsset]
-let assets = PhotoAsset.from(phAssets: [phAsset1, phAsset2])
-```
-
----
-
 ## MediaAsset Reference
 
-Use `MediaAsset` when you want photos and videos in the same gallery.
+`MediaAsset` is the unified type for both photos and videos.
 
 ```swift
 // Single items
@@ -557,6 +542,31 @@ asset.videoURL    // URL?        — nil for photos
 
 ---
 
+## PhotoAsset Reference
+
+| Initializer | Use when |
+|-------------|----------|
+| `PhotoAsset(image: UIImage)` | You already have a `UIImage` in memory |
+| `PhotoAsset(phAsset: PHAsset)` | Loading from the user's Photos library |
+| `PhotoAsset(imageURL: URL)` | Fetching from a remote server |
+
+### Batch helpers
+
+```swift
+// [UIImage] → [PhotoAsset]
+let assets = PhotoAsset.from(uiImages: [img1, img2, img3])
+
+// [PHAsset] → [PhotoAsset]
+let assets = PhotoAsset.from(phAssets: [phAsset1, phAsset2])
+
+// Wrap directly as MediaAsset
+let items = MediaAsset.from(uiImages: [img1, img2])
+// or from PHAssets:
+let items = MediaAsset.from(photoAssets: PhotoAsset.from(phAssets: [phAsset1]))
+```
+
+---
+
 ## Delegate Reference
 
 All methods have default no-op implementations — adopt only what you need.
@@ -565,7 +575,7 @@ All methods have default no-op implementations — adopt only what you need.
 public protocol HImageViewerControlDelegate: AnyObject {
 
     /// Called when the user taps Save.
-    /// - `photos`: Every photo currently in the viewer.
+    /// - `photos`: Every photo currently in the viewer (videos excluded).
     /// - `comment`: Text from the comment box (empty string if hidden).
     func didTapSaveButton(comment: String, photos: [PhotoAsset])
 
@@ -575,6 +585,14 @@ public protocol HImageViewerControlDelegate: AnyObject {
 
     /// Called when the viewer is dismissed via the close button or drag-to-dismiss (modal only).
     func didTapCloseButton()
+
+    /// Called after the user deletes one or more items via the selection grid.
+    /// - `assets`: The items that were removed.
+    func didDeleteMediaAssets(_ assets: [MediaAsset])
+
+    /// Called every time the visible page changes (swipe or programmatic).
+    /// - `index`: Zero-based index of the newly visible item.
+    func didChangePage(to index: Int)
 }
 ```
 

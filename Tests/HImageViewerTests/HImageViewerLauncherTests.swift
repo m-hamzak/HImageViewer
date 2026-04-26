@@ -18,10 +18,6 @@ final class HImageViewerLauncherTests: XCTestCase {
 
     // MARK: - Helpers
 
-    private func makeAssets(_ count: Int = 1) -> [PhotoAsset] {
-        (0..<count).map { _ in PhotoAsset(image: UIImage(systemName: "star")!) }
-    }
-
     private func makeMediaAssets(_ count: Int = 1) -> [MediaAsset] {
         (0..<count).map { _ in .photo(PhotoAsset(image: UIImage(systemName: "star")!)) }
     }
@@ -46,95 +42,75 @@ final class HImageViewerLauncherTests: XCTestCase {
         return vc
     }
 
-    // MARK: - present (photo-only)
+    // MARK: - present
 
-    func test_present_photos_presentsHostingController() {
+    func test_present_presentsHostingController() {
         let vc = makeStandaloneVC()
-        HImageViewerLauncher.present(from: vc, assets: makeAssets())
+        HImageViewerLauncher.present(from: vc, mediaAssets: makeMediaAssets())
         XCTAssertNotNil(vc.presentedViewController,
                         "present must push a hosting controller modally")
     }
 
-    func test_present_photos_presentedVCIsHostingController() {
-        let vc = makeStandaloneVC()
-        HImageViewerLauncher.present(from: vc, assets: makeAssets())
-        XCTAssertTrue(vc.presentedViewController is UIHostingController<PhotoViewerContainer>,
-                      "Presented controller must be a UIHostingController wrapping PhotoViewerContainer")
-    }
-
-    func test_present_photos_usesFullScreenStyle() {
-        let vc = makeStandaloneVC()
-        HImageViewerLauncher.present(from: vc, assets: makeAssets())
-        XCTAssertEqual(vc.presentedViewController?.modalPresentationStyle, .fullScreen)
-    }
-
-    // MARK: - present (media)
-
-    func test_present_media_presentsHostingController() {
+    func test_present_presentedVCIsHostingController() {
         let vc = makeStandaloneVC()
         HImageViewerLauncher.present(from: vc, mediaAssets: makeMediaAssets())
-        XCTAssertNotNil(vc.presentedViewController,
-                        "present(mediaAssets:) must push a hosting controller modally")
+        XCTAssertTrue(vc.presentedViewController is UIHostingController<MediaViewerContainer>,
+                      "Presented controller must be a UIHostingController wrapping MediaViewerContainer")
     }
 
-    func test_present_media_usesFullScreenStyle() {
+    func test_present_usesFullScreenStyle() {
         let vc = makeStandaloneVC()
         HImageViewerLauncher.present(from: vc, mediaAssets: makeMediaAssets())
         XCTAssertEqual(vc.presentedViewController?.modalPresentationStyle, .fullScreen)
     }
 
-    // MARK: - push (photo-only)
+    func test_present_multipleAssets_presentsHostingController() {
+        let vc = makeStandaloneVC()
+        HImageViewerLauncher.present(from: vc, mediaAssets: makeMediaAssets(3))
+        XCTAssertNotNil(vc.presentedViewController)
+    }
 
-    func test_push_photos_pushesOntoNavigationStack() {
+    // MARK: - push
+
+    func test_push_pushesOntoNavigationStack() {
         let (nav, root) = makeNavigationStack()
-        HImageViewerLauncher.push(from: root, assets: makeAssets())
+        HImageViewerLauncher.push(from: root, mediaAssets: makeMediaAssets())
         XCTAssertEqual(nav.viewControllers.count, 2,
                        "push must add the viewer to the navigation stack")
     }
 
-    func test_push_photos_pushedVCIsHostingController() {
+    func test_push_pushedVCIsHostingController() {
         let (nav, root) = makeNavigationStack()
-        HImageViewerLauncher.push(from: root, assets: makeAssets())
-        XCTAssertTrue(nav.viewControllers.last is UIHostingController<PhotoViewerContainer>,
-                      "Pushed controller must be a UIHostingController wrapping PhotoViewerContainer")
+        HImageViewerLauncher.push(from: root, mediaAssets: makeMediaAssets())
+        XCTAssertTrue(nav.viewControllers.last is UIHostingController<MediaViewerContainer>,
+                      "Pushed controller must be a UIHostingController wrapping MediaViewerContainer")
     }
 
-    func test_push_photos_noNavigationController_isNoOp() {
+    func test_push_noNavigationController_isNoOp() {
         let vc = makeStandaloneVC()
-        // Must not crash and must not present anything.
-        HImageViewerLauncher.push(from: vc, assets: makeAssets())
+        HImageViewerLauncher.push(from: vc, mediaAssets: makeMediaAssets())
         XCTAssertNil(vc.presentedViewController,
                      "push without a navigation controller must be a silent no-op")
     }
 
-    // MARK: - push (media)
-
-    func test_push_media_pushesOntoNavigationStack() {
+    func test_push_multipleAssets_pushesOntoStack() {
         let (nav, root) = makeNavigationStack()
-        HImageViewerLauncher.push(from: root, mediaAssets: makeMediaAssets())
-        XCTAssertEqual(nav.viewControllers.count, 2,
-                       "push(mediaAssets:) must add the viewer to the navigation stack")
+        HImageViewerLauncher.push(from: root, mediaAssets: makeMediaAssets(5))
+        XCTAssertEqual(nav.viewControllers.count, 2)
     }
 
-    func test_push_media_noNavigationController_isNoOp() {
-        let vc = makeStandaloneVC()
-        HImageViewerLauncher.push(from: vc, mediaAssets: makeMediaAssets())
-        XCTAssertNil(vc.presentedViewController,
-                     "push(mediaAssets:) without a navigation controller must be a silent no-op")
-    }
-
-    // MARK: - push vs present produce different presentation styles
+    // MARK: - present vs push
 
     func test_present_isModal_push_isNavigation() {
         let (nav, root) = makeNavigationStack()
 
         // Present from a different VC so the stack isn't modified.
         let standalone = makeStandaloneVC()
-        HImageViewerLauncher.present(from: standalone, assets: makeAssets())
+        HImageViewerLauncher.present(from: standalone, mediaAssets: makeMediaAssets())
         XCTAssertNotNil(standalone.presentedViewController, "present → modal")
 
         // Push from the nav-stack VC.
-        HImageViewerLauncher.push(from: root, assets: makeAssets())
+        HImageViewerLauncher.push(from: root, mediaAssets: makeMediaAssets())
         XCTAssertEqual(nav.viewControllers.count, 2, "push → navigation stack")
     }
 }

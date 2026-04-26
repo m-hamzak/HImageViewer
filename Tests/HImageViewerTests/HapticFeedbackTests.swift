@@ -41,22 +41,14 @@ final class HapticFeedbackTests: XCTestCase {
     // MARK: - Helpers
 
     private func makeVM(
-        assets: [PhotoAsset] = [],
-        mediaAssets: [MediaAsset] = [],
-        usesMediaMode: Bool = false
+        mediaAssets: [MediaAsset] = []
     ) -> (HImageViewerViewModel, MockHapticFeedbackProvider) {
         let mock = MockHapticFeedbackProvider()
         let vm = HImageViewerViewModel(
-            assets: assets,
             mediaAssets: mediaAssets,
-            usesMediaMode: usesMediaMode,
             haptics: mock
         )
         return (vm, mock)
-    }
-
-    private func makeAssets(_ n: Int) -> [PhotoAsset] {
-        (0..<n).map { _ in PhotoAsset(image: UIImage(systemName: "star")!) }
     }
 
     private func makeMediaAssets(_ n: Int) -> [MediaAsset] {
@@ -66,13 +58,13 @@ final class HapticFeedbackTests: XCTestCase {
     // MARK: - handleSelection
 
     func test_handleSelection_select_triggersMediumImpact() {
-        let (vm, mock) = makeVM(assets: makeAssets(3))
+        let (vm, mock) = makeVM(mediaAssets: makeMediaAssets(3))
         vm.handleSelection(0)
         XCTAssertEqual(mock.lastStyle, .medium)
     }
 
     func test_handleSelection_deselect_triggersMediumImpact() {
-        let (vm, mock) = makeVM(assets: makeAssets(3))
+        let (vm, mock) = makeVM(mediaAssets: makeMediaAssets(3))
         vm.handleSelection(0)   // select
         mock.reset()
         vm.handleSelection(0)   // deselect
@@ -81,13 +73,13 @@ final class HapticFeedbackTests: XCTestCase {
     }
 
     func test_handleSelection_calledExactlyOnce() {
-        let (vm, mock) = makeVM(assets: makeAssets(3))
+        let (vm, mock) = makeVM(mediaAssets: makeMediaAssets(3))
         vm.handleSelection(1)
         XCTAssertEqual(mock.impactCallCount, 1)
     }
 
     func test_handleSelection_multipleTaps_callCountMatches() {
-        let (vm, mock) = makeVM(assets: makeAssets(5))
+        let (vm, mock) = makeVM(mediaAssets: makeMediaAssets(5))
         vm.handleSelection(0)
         vm.handleSelection(1)
         vm.handleSelection(2)
@@ -97,7 +89,7 @@ final class HapticFeedbackTests: XCTestCase {
     // MARK: - cancelSelection
 
     func test_cancelSelection_triggersLightImpact() {
-        let (vm, mock) = makeVM(assets: makeAssets(3))
+        let (vm, mock) = makeVM(mediaAssets: makeMediaAssets(3))
         vm.selectionMode = true
         vm.selectedIndices = [0, 1]
         vm.cancelSelection()
@@ -105,7 +97,7 @@ final class HapticFeedbackTests: XCTestCase {
     }
 
     func test_cancelSelection_whenNothingSelected_stillFires() {
-        let (vm, mock) = makeVM(assets: makeAssets(3))
+        let (vm, mock) = makeVM(mediaAssets: makeMediaAssets(3))
         vm.cancelSelection()
         XCTAssertEqual(mock.impactCallCount, 1,
                        "cancelSelection always fires, even with empty selection")
@@ -115,29 +107,21 @@ final class HapticFeedbackTests: XCTestCase {
     // MARK: - handleDelete
 
     func test_handleDelete_triggersHeavyImpact() {
-        let (vm, mock) = makeVM(assets: makeAssets(3))
+        let (vm, mock) = makeVM(mediaAssets: makeMediaAssets(3))
         vm.selectedIndices = [0]
         vm.handleDelete()
         XCTAssertEqual(mock.lastStyle, .heavy)
     }
 
     func test_handleDelete_calledExactlyOnce() {
-        let (vm, mock) = makeVM(assets: makeAssets(3))
+        let (vm, mock) = makeVM(mediaAssets: makeMediaAssets(3))
         vm.selectedIndices = [0, 1]
         vm.handleDelete()
         XCTAssertEqual(mock.impactCallCount, 1)
     }
 
-    func test_handleDelete_mediaMode_triggersHeavyImpact() {
-        let (vm, mock) = makeVM(mediaAssets: makeMediaAssets(3), usesMediaMode: true)
-        vm.selectedIndices = [0]
-        vm.handleDelete()
-        XCTAssertEqual(mock.lastStyle, .heavy)
-    }
-
     func test_handleDelete_emptySelection_doesNotFire() {
-        let (vm, mock) = makeVM(assets: makeAssets(3))
-        // selectedIndices is empty by default
+        let (vm, mock) = makeVM(mediaAssets: makeMediaAssets(3))
         vm.handleDelete()
         XCTAssertEqual(mock.impactCallCount, 0,
                        "No haptic should fire when there is nothing to delete")
@@ -146,13 +130,13 @@ final class HapticFeedbackTests: XCTestCase {
     // MARK: - handleSave
 
     func test_handleSave_triggersMediumImpact() {
-        let (vm, mock) = makeVM(assets: makeAssets(1))
+        let (vm, mock) = makeVM(mediaAssets: makeMediaAssets(1))
         vm.handleSave()
         XCTAssertEqual(mock.lastStyle, .medium)
     }
 
     func test_handleSave_calledExactlyOnce() {
-        let (vm, mock) = makeVM(assets: makeAssets(1))
+        let (vm, mock) = makeVM(mediaAssets: makeMediaAssets(1))
         vm.handleSave()
         XCTAssertEqual(mock.impactCallCount, 1)
     }
@@ -160,7 +144,7 @@ final class HapticFeedbackTests: XCTestCase {
     // MARK: - Mock provider behaviour
 
     func test_mockProvider_recordsAllStyles() {
-        let (vm, mock) = makeVM(assets: makeAssets(3))
+        let (vm, mock) = makeVM(mediaAssets: makeMediaAssets(3))
         vm.handleSelection(0)   // medium
         vm.cancelSelection()    // light
         vm.selectedIndices = [0]
@@ -169,7 +153,7 @@ final class HapticFeedbackTests: XCTestCase {
     }
 
     func test_mockProvider_reset_clearsState() {
-        let (vm, mock) = makeVM(assets: makeAssets(3))
+        let (vm, mock) = makeVM(mediaAssets: makeMediaAssets(3))
         vm.handleSelection(0)
         mock.reset()
         XCTAssertEqual(mock.impactCallCount, 0)
@@ -179,7 +163,7 @@ final class HapticFeedbackTests: XCTestCase {
     // MARK: - Default provider type
 
     func test_vmDefaultHaptics_isRealProvider() {
-        let vm = HImageViewerViewModel(usesMediaMode: false)
+        let vm = HImageViewerViewModel()
         XCTAssertTrue(vm.haptics is HapticFeedbackProvider,
                       "Default haptics must be the real HapticFeedbackProvider")
     }

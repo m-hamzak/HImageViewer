@@ -17,6 +17,9 @@ enum ZoomDefaults {
 struct ZoomableImageView: View {
 
     let image: UIImage
+    /// Increment this value to animate the view back to default zoom (scale 1, offset zero).
+    /// Pass the viewer's `currentIndex` so each page resets when the user navigates away.
+    var resetToken: Int = 0
 
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
@@ -37,6 +40,14 @@ struct ZoomableImageView: View {
                 // Only attach the pan drag while zoomed in — at scale 1.0 the
                 // gesture would race with TabView's horizontal page-swipe.
                 .simultaneousGesture(scale > ZoomDefaults.minScale ? dragGesture(in: geometry) : nil)
+        }
+        .onChangeCompat(of: resetToken) { _ in
+            withAnimation(.easeOut(duration: 0.25)) {
+                scale = ZoomDefaults.minScale
+                lastScale = ZoomDefaults.minScale
+                offset = .zero
+                lastOffset = .zero
+            }
         }
     }
 

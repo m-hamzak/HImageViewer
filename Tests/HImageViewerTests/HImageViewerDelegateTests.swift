@@ -15,9 +15,7 @@ final class HImageViewerDelegateTests: XCTestCase {
 
     func test_defaultImpl_didTapSaveButton_doesNotCrash() {
         let delegate = MinimalDelegate()
-        // This should NOT crash — the default implementation is an empty function
         delegate.didTapSaveButton(comment: "test", photos: [])
-        // Reaching this line = test passed (no crash occurred)
     }
 
     func test_defaultImpl_didTapCloseButton_doesNotCrash() {
@@ -31,48 +29,67 @@ final class HImageViewerDelegateTests: XCTestCase {
         delegate.didTapEditButton(photo: photo)
     }
 
+    func test_defaultImpl_didDeleteMediaAssets_doesNotCrash() {
+        let delegate = MinimalDelegate()
+        delegate.didDeleteMediaAssets([])
+    }
+
+    func test_defaultImpl_didChangePage_doesNotCrash() {
+        let delegate = MinimalDelegate()
+        delegate.didChangePage(to: 3)
+    }
+
     // MARK: - Custom Implementation Tests
 
     func test_customImpl_didTapSaveButton_isCalled() {
         let delegate = MockDelegate()
         let photo = PhotoAsset(image: UIImage(systemName: "star")!)
-
-        // Simulate the viewer calling the delegate
         delegate.didTapSaveButton(comment: "Nice photo", photos: [photo])
-
-        // Verify the mock recorded everything correctly
-        XCTAssertTrue(delegate.didTapSaveCalled, "didTapSaveButton should have been called")
-        XCTAssertEqual(delegate.lastSaveComment, "Nice photo", "Comment should be passed through")
-        XCTAssertEqual(delegate.lastSavePhotos?.count, 1, "Photos array should contain 1 photo")
+        XCTAssertTrue(delegate.didTapSaveCalled)
+        XCTAssertEqual(delegate.lastSaveComment, "Nice photo")
+        XCTAssertEqual(delegate.lastSavePhotos?.count, 1)
     }
 
     func test_customImpl_didTapCloseButton_isCalled() {
         let delegate = MockDelegate()
         delegate.didTapCloseButton()
-        XCTAssertTrue(delegate.didTapCloseCalled, "didTapCloseButton should have been called")
+        XCTAssertTrue(delegate.didTapCloseCalled)
     }
 
     func test_customImpl_didTapEditButton_isCalled() {
         let delegate = MockDelegate()
         let photo = PhotoAsset(image: UIImage(systemName: "star")!)
-
         delegate.didTapEditButton(photo: photo)
+        XCTAssertTrue(delegate.didTapEditCalled)
+        XCTAssertNotNil(delegate.lastEditPhoto)
+    }
 
-        XCTAssertTrue(delegate.didTapEditCalled, "didTapEditButton should have been called")
-        XCTAssertNotNil(delegate.lastEditPhoto, "The photo should be passed to the delegate")
+    func test_customImpl_didDeleteMediaAssets_isCalled() {
+        let delegate = MockDelegate()
+        let items: [MediaAsset] = [
+            .photo(PhotoAsset(image: UIImage(systemName: "star")!))
+        ]
+        delegate.didDeleteMediaAssets(items)
+        XCTAssertTrue(delegate.didDeleteCalled)
+        XCTAssertEqual(delegate.lastDeletedAssets?.count, 1)
+    }
+
+    func test_customImpl_didChangePage_isCalled() {
+        let delegate = MockDelegate()
+        delegate.didChangePage(to: 2)
+        XCTAssertTrue(delegate.didChangePageCalled)
+        XCTAssertEqual(delegate.lastPageIndex, 2)
     }
 
     // MARK: - Selective Adoption Test
 
     func test_selectiveAdoption_allMethodsCallable() {
         let delegate = MinimalDelegate()
-
-        // All three calls should succeed without crash
         delegate.didTapSaveButton(comment: "test", photos: [])
         delegate.didTapCloseButton()
         delegate.didTapEditButton(photo: PhotoAsset(image: UIImage(systemName: "star")!))
-
-        // If we reach here, selective adoption works correctly
+        delegate.didDeleteMediaAssets([])
+        delegate.didChangePage(to: 0)
     }
 
     // MARK: - Multiple calls
@@ -101,20 +118,36 @@ final class HImageViewerDelegateTests: XCTestCase {
         XCTAssertTrue(delegate.didTapCloseCalled)
     }
 
+    func test_didChangePage_calledMultipleTimes_callCountAccumulates() {
+        let delegate = MockDelegate()
+        delegate.didChangePage(to: 0)
+        delegate.didChangePage(to: 1)
+        delegate.didChangePage(to: 2)
+        XCTAssertEqual(delegate.pageChangeCallCount, 3)
+        XCTAssertEqual(delegate.lastPageIndex, 2)
+    }
+
     func test_reset_clearsAllFields() {
         let delegate = MockDelegate()
         let photo = PhotoAsset(image: UIImage(systemName: "star")!)
         delegate.didTapSaveButton(comment: "x", photos: [photo])
         delegate.didTapCloseButton()
         delegate.didTapEditButton(photo: photo)
+        delegate.didDeleteMediaAssets([.photo(photo)])
+        delegate.didChangePage(to: 3)
         delegate.reset()
 
         XCTAssertFalse(delegate.didTapSaveCalled)
         XCTAssertFalse(delegate.didTapCloseCalled)
         XCTAssertFalse(delegate.didTapEditCalled)
+        XCTAssertFalse(delegate.didDeleteCalled)
+        XCTAssertFalse(delegate.didChangePageCalled)
         XCTAssertNil(delegate.lastSaveComment)
         XCTAssertNil(delegate.lastSavePhotos)
         XCTAssertNil(delegate.lastEditPhoto)
+        XCTAssertNil(delegate.lastDeletedAssets)
+        XCTAssertNil(delegate.lastPageIndex)
+        XCTAssertEqual(delegate.pageChangeCallCount, 0)
     }
 
     func test_saveWithEmptyPhotos_emptyArrayPropagated() {
@@ -136,7 +169,7 @@ final class HImageViewerDelegateTests: XCTestCase {
         XCTAssertNil(delegate.lastSaveComment)
     }
 
-    func test_allThreeCallbacks_independentFlags() {
+    func test_allCallbacks_independentFlags() {
         let delegate = MockDelegate()
         let photo = PhotoAsset(image: UIImage(systemName: "star")!)
 
@@ -144,12 +177,37 @@ final class HImageViewerDelegateTests: XCTestCase {
         XCTAssertTrue(delegate.didTapSaveCalled)
         XCTAssertFalse(delegate.didTapCloseCalled)
         XCTAssertFalse(delegate.didTapEditCalled)
+        XCTAssertFalse(delegate.didDeleteCalled)
+        XCTAssertFalse(delegate.didChangePageCalled)
 
         delegate.didTapCloseButton()
         XCTAssertTrue(delegate.didTapCloseCalled)
-        XCTAssertFalse(delegate.didTapEditCalled)
 
         delegate.didTapEditButton(photo: photo)
         XCTAssertTrue(delegate.didTapEditCalled)
+
+        delegate.didDeleteMediaAssets([.photo(photo)])
+        XCTAssertTrue(delegate.didDeleteCalled)
+
+        delegate.didChangePage(to: 1)
+        XCTAssertTrue(delegate.didChangePageCalled)
+    }
+
+    // MARK: - didDeleteMediaAssets content
+
+    func test_didDeleteMediaAssets_passesCorrectItems() {
+        let delegate = MockDelegate()
+        let photo = PhotoAsset(image: UIImage(systemName: "star")!)
+        let videoURL = URL(string: "https://example.com/v.mp4")!
+        let items: [MediaAsset] = [.photo(photo), .video(videoURL)]
+        delegate.didDeleteMediaAssets(items)
+        XCTAssertEqual(delegate.lastDeletedAssets?.count, 2)
+    }
+
+    func test_didDeleteMediaAssets_emptyArray_callsFlagTrue() {
+        let delegate = MockDelegate()
+        delegate.didDeleteMediaAssets([])
+        XCTAssertTrue(delegate.didDeleteCalled)
+        XCTAssertEqual(delegate.lastDeletedAssets?.count, 0)
     }
 }

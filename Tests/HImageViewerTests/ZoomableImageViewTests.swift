@@ -131,7 +131,7 @@ final class ZoomableImageViewTests: XCTestCase {
     @MainActor
     func test_zoomableImageView_renders() {
         let image = UIImage(systemName: "photo")!
-        let view = ZoomableImageView(image: image)
+        let view = ZoomableImageView(image: image, resetToken: 0)
         let controller = UIHostingController(rootView: view)
         controller.view.frame = CGRect(origin: .zero, size: CGSize(width: 375, height: 667))
         controller.view.layoutIfNeeded()
@@ -261,6 +261,24 @@ final class ZoomableImageViewTests: XCTestCase {
         scale = ZoomDefaults.minScale
         XCTAssertFalse(scale > ZoomDefaults.minScale,
                        "Gesture must deactivate once scale resets to minScale")
+    }
+
+    // MARK: - Constants additional
+
+    // MARK: - resetToken rendering
+
+    @MainActor
+    func test_zoomableImageView_withResetToken_renders() {
+        let image = UIImage(systemName: "photo")!
+        let view = ZoomableImageView(image: image, resetToken: 3)
+        let controller = UIHostingController(rootView: view)
+        controller.view.frame = CGRect(origin: .zero, size: CGSize(width: 375, height: 667))
+        controller.view.layoutIfNeeded()
+        let renderer = UIGraphicsImageRenderer(size: controller.view.bounds.size)
+        let rendered = renderer.image { _ in
+            controller.view.drawHierarchy(in: controller.view.bounds, afterScreenUpdates: true)
+        }
+        XCTAssertGreaterThan(rendered.size.width, 0)
     }
 
     // MARK: - Constants additional

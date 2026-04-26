@@ -16,27 +16,29 @@ final class MockDelegate: @preconcurrency HImageViewerControlDelegate {
 
     // MARK: - Save Button Tracking
 
-    /// True if didTapSaveButton was called at least once
     var didTapSaveCalled = false
-
-    /// The comment string from the most recent didTapSaveButton call
     var lastSaveComment: String?
-
-    /// The photos array from the most recent didTapSaveButton call
     var lastSavePhotos: [PhotoAsset]?
 
     // MARK: - Close Button Tracking
 
-    /// True if didTapCloseButton was called at least once
     var didTapCloseCalled = false
 
     // MARK: - Edit Button Tracking
 
-    /// True if didTapEditButton was called at least once
     var didTapEditCalled = false
-
-    /// The photo from the most recent didTapEditButton call
     var lastEditPhoto: PhotoAsset?
+
+    // MARK: - Delete Tracking
+
+    var didDeleteCalled = false
+    var lastDeletedAssets: [MediaAsset]?
+
+    // MARK: - Page Change Tracking
+
+    var didChangePageCalled = false
+    var lastPageIndex: Int?
+    var pageChangeCallCount: Int = 0
 
     // MARK: - Protocol Implementation
 
@@ -55,9 +57,19 @@ final class MockDelegate: @preconcurrency HImageViewerControlDelegate {
         lastEditPhoto = photo
     }
 
+    func didDeleteMediaAssets(_ assets: [MediaAsset]) {
+        didDeleteCalled = true
+        lastDeletedAssets = assets
+    }
+
+    func didChangePage(to index: Int) {
+        didChangePageCalled = true
+        lastPageIndex = index
+        pageChangeCallCount += 1
+    }
+
     // MARK: - Helper Methods
 
-    /// Resets all tracking properties to their initial state.
     func reset() {
         didTapSaveCalled = false
         lastSaveComment = nil
@@ -65,6 +77,11 @@ final class MockDelegate: @preconcurrency HImageViewerControlDelegate {
         didTapCloseCalled = false
         didTapEditCalled = false
         lastEditPhoto = nil
+        didDeleteCalled = false
+        lastDeletedAssets = nil
+        didChangePageCalled = false
+        lastPageIndex = nil
+        pageChangeCallCount = 0
     }
 }
 

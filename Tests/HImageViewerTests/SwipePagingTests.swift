@@ -12,48 +12,34 @@ import SwiftUI
 @MainActor
 final class SwipePagingTests: XCTestCase {
 
+    // MARK: - Helpers
+
+    private func makeMediaAssets(_ count: Int) -> [MediaAsset] {
+        (0..<count).map { _ in .photo(PhotoAsset(image: UIImage(systemName: "star")!)) }
+    }
+
     // MARK: - initialIndex Clamping
 
     func test_initialIndex_zero_withOneAsset() {
-        let assets = [PhotoAsset(image: UIImage(systemName: "star")!)]
-        let view = HImageViewer(
-            assets: .constant(assets),
-            selectedVideo: .constant(nil),
-            initialIndex: 0
-        )
+        let items = makeMediaAssets(1)
+        let view = HImageViewer(mediaAssets: .constant(items), initialIndex: 0)
         XCTAssertNotNil(view, "HImageViewer with initialIndex 0 should initialise without crashing")
     }
 
     func test_initialIndex_outOfBounds_doesNotCrash() {
-        let assets = [
-            PhotoAsset(image: UIImage(systemName: "star")!),
-            PhotoAsset(image: UIImage(systemName: "heart")!)
-        ]
-        // initialIndex 99 with 2 assets should clamp to 1 — not crash
-        let view = HImageViewer(
-            assets: .constant(assets),
-            selectedVideo: .constant(nil),
-            initialIndex: 99
-        )
+        let items = makeMediaAssets(2)
+        let view = HImageViewer(mediaAssets: .constant(items), initialIndex: 99)
         XCTAssertNotNil(view, "Out-of-bounds initialIndex must not crash")
     }
 
     func test_initialIndex_negative_doesNotCrash() {
-        let assets = [PhotoAsset(image: UIImage(systemName: "star")!)]
-        let view = HImageViewer(
-            assets: .constant(assets),
-            selectedVideo: .constant(nil),
-            initialIndex: -5
-        )
+        let items = makeMediaAssets(1)
+        let view = HImageViewer(mediaAssets: .constant(items), initialIndex: -5)
         XCTAssertNotNil(view, "Negative initialIndex must not crash")
     }
 
     func test_initialIndex_emptyAssets_doesNotCrash() {
-        let view = HImageViewer(
-            assets: .constant([]),
-            selectedVideo: .constant(nil),
-            initialIndex: 3
-        )
+        let view = HImageViewer(mediaAssets: .constant([]), initialIndex: 3)
         XCTAssertNotNil(view, "initialIndex on empty assets must not crash")
     }
 
@@ -88,7 +74,6 @@ final class SwipePagingTests: XCTestCase {
 
     func test_selectMode_entry_setsFlag() {
         var selectionMode = false
-        // Replicate onSelectToggle
         selectionMode = true
         XCTAssertTrue(selectionMode, "onSelectToggle must set selectionMode to true")
     }
@@ -106,35 +91,32 @@ final class SwipePagingTests: XCTestCase {
 
     func test_showSelectButton_trueForMultipleAssets() {
         let count = 3
-        let showSelectButton = count > 1
-        XCTAssertTrue(showSelectButton, "Select button must appear when there are 2+ assets")
+        XCTAssertTrue(count > 1, "Select button must appear when there are 2+ assets")
     }
 
     func test_showSelectButton_falseForSingleAsset() {
         let count = 1
-        let showSelectButton = count > 1
-        XCTAssertFalse(showSelectButton, "Select button must be hidden for a single asset")
+        XCTAssertFalse(count > 1, "Select button must be hidden for a single asset")
     }
 
     func test_showSelectButton_falseForEmptyAssets() {
         let count = 0
-        let showSelectButton = count > 1
-        XCTAssertFalse(showSelectButton, "Select button must be hidden when no assets")
+        XCTAssertFalse(count > 1, "Select button must be hidden when no assets")
+    }
+
+    func test_showSelectButton_trueForExactlyTwo() {
+        XCTAssertTrue(2 > 1)
     }
 
     // MARK: - Rendering smoke test
 
     func test_pagedViewer_multipleAssets_renders() {
-        let assets = [
-            PhotoAsset(image: UIImage(systemName: "star")!),
-            PhotoAsset(image: UIImage(systemName: "heart")!),
-            PhotoAsset(image: UIImage(systemName: "circle")!)
+        let items: [MediaAsset] = [
+            .photo(PhotoAsset(image: UIImage(systemName: "star")!)),
+            .photo(PhotoAsset(image: UIImage(systemName: "heart")!)),
+            .photo(PhotoAsset(image: UIImage(systemName: "circle")!))
         ]
-        let view = HImageViewer(
-            assets: .constant(assets),
-            selectedVideo: .constant(nil),
-            initialIndex: 1
-        )
+        let view = HImageViewer(mediaAssets: .constant(items), initialIndex: 1)
         let controller = UIHostingController(rootView: view)
         controller.view.frame = CGRect(origin: .zero, size: CGSize(width: 375, height: 812))
         controller.view.layoutIfNeeded()
@@ -146,32 +128,21 @@ final class SwipePagingTests: XCTestCase {
         XCTAssertGreaterThan(rendered.size.width, 0, "Paged viewer should render without crashing")
     }
 
-    // MARK: - MediaAssets init
-
-    func test_mediaAssetsInit_withPhotoItems_doesNotCrash() {
+    func test_pagedViewer_mixedMedia_renders() {
         let items: [MediaAsset] = [
             .photo(PhotoAsset(image: UIImage(systemName: "star")!)),
-            .photo(PhotoAsset(image: UIImage(systemName: "heart")!))
+            .video(URL(string: "https://example.com/v.mp4")!)
         ]
         let view = HImageViewer(mediaAssets: .constant(items), initialIndex: 0)
-        XCTAssertNotNil(view)
-    }
+        let controller = UIHostingController(rootView: view)
+        controller.view.frame = CGRect(origin: .zero, size: CGSize(width: 375, height: 812))
+        controller.view.layoutIfNeeded()
 
-    func test_mediaAssetsInit_outOfBoundsIndex_doesNotCrash() {
-        let items: [MediaAsset] = [.photo(PhotoAsset(image: UIImage(systemName: "star")!))]
-        let view = HImageViewer(mediaAssets: .constant(items), initialIndex: 99)
-        XCTAssertNotNil(view)
-    }
-
-    func test_mediaAssetsInit_empty_doesNotCrash() {
-        let view = HImageViewer(mediaAssets: .constant([]), initialIndex: 0)
-        XCTAssertNotNil(view)
-    }
-
-    // MARK: - showSelectButton for exactly 2 assets
-
-    func test_showSelectButton_trueForExactlyTwo() {
-        XCTAssertTrue(2 > 1)
+        let renderer = UIGraphicsImageRenderer(size: controller.view.bounds.size)
+        let rendered = renderer.image { _ in
+            controller.view.drawHierarchy(in: controller.view.bounds, afterScreenUpdates: true)
+        }
+        XCTAssertGreaterThan(rendered.size.width, 0, "Mixed media viewer should render without crashing")
     }
 
     // MARK: - Deletion correctness
@@ -212,8 +183,8 @@ final class SwipePagingTests: XCTestCase {
 
     // MARK: - totalCount
 
-    func test_totalCount_photoOnlyMode_equalsAssetsCount() {
+    func test_totalCount_equalsMediaAssetsCount() {
         let count = 4
-        XCTAssertEqual(count, 4, "legacy mode: totalCount == assets.count")
+        XCTAssertEqual(count, 4)
     }
 }
