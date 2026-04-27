@@ -33,10 +33,10 @@ struct ContentView: View {
 
 struct PhotoGalleryExample: View {
     @State private var items: [MediaAsset] = MediaAsset.from(uiImages: [
-        UIImage(systemName: "photo")!,
-        UIImage(systemName: "photo.fill")!,
-        UIImage(systemName: "photo.on.rectangle")!,
-        UIImage(systemName: "photo.stack")!,
+        sym("photo"),
+        sym("photo.fill"),
+        sym("photo.on.rectangle"),
+        sym("photo.stack"),
     ])
     @State private var isPresented = false
 
@@ -58,9 +58,9 @@ struct PhotoGalleryExample: View {
 
 struct MixedMediaExample: View {
     @State private var items: [MediaAsset] = [
-        .photo(PhotoAsset(image: UIImage(systemName: "photo")!)),
+        .photo(PhotoAsset(image: sym("photo"))),
         .video(URL(string: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4")!),
-        .photo(PhotoAsset(image: UIImage(systemName: "star")!)),
+        .photo(PhotoAsset(image: sym("star"))),
     ]
     @State private var isPresented = false
 
@@ -105,7 +105,7 @@ struct RemoteImagesExample: View {
 // MARK: - Glass Theme (default)
 
 struct GlassThemeExample: View {
-    @State private var items = MediaAsset.from(uiImages: Array(repeating: UIImage(systemName: "photo")!, count: 3))
+    @State private var items = MediaAsset.from(uiImages: Array(repeating: sym("photo"), count: 3))
     @State private var isPresented = false
 
     var body: some View {
@@ -126,7 +126,7 @@ struct GlassThemeExample: View {
 // MARK: - Classic Theme
 
 struct ClassicThemeExample: View {
-    @State private var items = MediaAsset.from(uiImages: Array(repeating: UIImage(systemName: "photo")!, count: 3))
+    @State private var items = MediaAsset.from(uiImages: Array(repeating: sym("photo"), count: 3))
     @State private var isPresented = false
 
     var body: some View {
@@ -150,7 +150,7 @@ struct ClassicThemeExample: View {
 // MARK: - Upload Progress
 
 struct UploadProgressExample: View {
-    @State private var items = MediaAsset.from(uiImages: [UIImage(systemName: "photo")!])
+    @State private var items = MediaAsset.from(uiImages: [sym("photo")])
     @State private var isPresented = false
     @StateObject private var uploadState = HImageViewerUploadState()
 
@@ -214,9 +214,9 @@ final class ExampleDelegate: HImageViewerControlDelegate {
 
 struct DelegateExample: View {
     @State private var items = MediaAsset.from(uiImages: [
-        UIImage(systemName: "photo")!,
-        UIImage(systemName: "star")!,
-        UIImage(systemName: "heart")!,
+        sym("photo"),
+        sym("star"),
+        sym("heart"),
     ])
     @State private var isPresented = false
     @State private var lastAction = "—"
@@ -251,11 +251,11 @@ struct DelegateExample: View {
 
 struct CaptionsExample: View {
     @State private var items: [MediaAsset] = [
-        .photo(PhotoAsset(image: UIImage(systemName: "photo")!,
+        .photo(PhotoAsset(image: sym("photo"),
                           caption: "Landscape shot — double-tap to zoom")),
-        .photo(PhotoAsset(image: UIImage(systemName: "star.fill")!,
+        .photo(PhotoAsset(image: sym("star.fill"),
                           caption: "Starred favourite")),
-        .photo(PhotoAsset(image: UIImage(systemName: "heart.fill")!,
+        .photo(PhotoAsset(image: sym("heart.fill"),
                           caption: "Most liked photo of the week")),
     ]
     @State private var isPresented = false
@@ -279,10 +279,10 @@ struct CaptionsExample: View {
 
 struct HapticShareExample: View {
     @State private var items: [MediaAsset] = MediaAsset.from(uiImages: [
-        UIImage(systemName: "photo")!,
-        UIImage(systemName: "photo.fill")!,
-        UIImage(systemName: "photo.on.rectangle")!,
-        UIImage(systemName: "photo.stack")!,
+        sym("photo"),
+        sym("photo.fill"),
+        sym("photo.on.rectangle"),
+        sym("photo.stack"),
     ])
     @State private var isPresented = false
 
@@ -315,11 +315,11 @@ struct HapticShareExample: View {
 
 struct ContextMenuExample: View {
     @State private var items: [MediaAsset] = [
-        .photo(PhotoAsset(image: UIImage(systemName: "photo")!,
+        .photo(PhotoAsset(image: sym("photo"),
                           caption: "Long-press for options")),
-        .photo(PhotoAsset(image: UIImage(systemName: "photo.fill")!,
+        .photo(PhotoAsset(image: sym("photo.fill"),
                           caption: "Copy · Share · Save to Photos")),
-        .photo(PhotoAsset(image: UIImage(systemName: "photo.stack")!,
+        .photo(PhotoAsset(image: sym("photo.stack"),
                           caption: "Works on every photo")),
     ]
     @State private var isPresented = false
@@ -351,4 +351,14 @@ struct UIKitLauncherExample: UIViewControllerRepresentable {
         UIKitExampleViewController()
     }
     func updateUIViewController(_ vc: UIKitExampleViewController, context: Context) {}
+}
+
+// MARK: - Helpers
+
+/// Creates an SF Symbol `UIImage` rasterised at 300 pt so it displays crisply
+/// at full-screen size without upscaling blur. Only used in the example app —
+/// real apps supply actual photos which are already high-resolution.
+private func sym(_ name: String) -> UIImage {
+    let config = UIImage.SymbolConfiguration(pointSize: 300, weight: .regular, scale: .large)
+    return UIImage(systemName: name, withConfiguration: config) ?? UIImage()
 }
