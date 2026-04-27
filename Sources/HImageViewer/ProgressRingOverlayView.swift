@@ -18,7 +18,6 @@ struct ProgressRingOverlayView: View {
                     .font(.subheadline)
                     .foregroundColor(.primary)
             }
-            
 
             ZStack {
                 Circle()
@@ -48,6 +47,20 @@ struct ProgressRingOverlayView: View {
         .padding(12)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
         .shadow(radius: 1)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(progressAccessibilityLabel)
+    }
+
+    // MARK: - Accessibility
+
+    /// VoiceOver label describing the current upload progress,
+    /// e.g. `"Uploading, 47 percent"` or `"Upload progress, 47 percent"`.
+    var progressAccessibilityLabel: String {
+        let pct = Int(progress * 100)
+        if let title {
+            return "\(title), \(pct) percent"
+        }
+        return "Upload progress, \(pct) percent"
     }
 }
 #Preview {
