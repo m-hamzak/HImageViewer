@@ -102,7 +102,7 @@
 			);
 			mainGroup = 47D439E7C9B64A5C88A49F9B /* HIImageViewerExample */;
 			packageReferences = (
-				3AF32F222F9E3DFC007F5B75 /* XCLocalSwiftPackageReference "../../HIImageViewer" */,
+				3AF32F222F9E3DFC007F5B75 /* XCLocalSwiftPackageReference ".." */,
 			);
 			productRefGroup = 9A8BB06C53E04A568D103651 /* Products */;
 			projectDirPath = "";
@@ -315,9 +315,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		3AF32F222F9E3DFC007F5B75 /* XCLocalSwiftPackageReference "../../HIImageViewer" */ = {
+		3AF32F222F9E3DFC007F5B75 /* XCLocalSwiftPackageReference ".." */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../../HIImageViewer;
+			relativePath = ..;
 		};
 /* End XCLocalSwiftPackageReference section */
 
