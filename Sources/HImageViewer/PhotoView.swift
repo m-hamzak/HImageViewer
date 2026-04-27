@@ -10,66 +10,103 @@ import Photos
 
 public struct PhotoView: View {
 
+    // MARK: - Properties
+
     @State private var didFailToLoad: Bool = false
-    @State private var imageLoadTask: Task<Void, Never>?
     @ObservedObject var photo: PhotoAsset
     let isSinglePhotoMode: Bool
-    
+
+    // MARK: - Theming
+
+    /// Accent color applied to the loading spinner. Defaults to `.blue`.
+    var tintColor: Color = .blue
+    /// Custom view shown while the photo loads. When `nil`, a gray background + spinner is shown.
+    var placeholderView: AnyView? = nil
+    /// Custom view shown when the photo fails to load. When `nil`, a red background + warning icon is shown.
+    var errorView: AnyView? = nil
+    /// Changes to this value animate the zoom back to its default state.
+    /// Pass the viewer's `currentIndex` so zoom resets when the user navigates to a different page.
+    var resetToken: Int = 0
+    /// When `true`, long-pressing a photo in single-photo mode shows a context menu
+    /// with Copy, Share, and Save to Photos actions.
+    var showContextMenu: Bool = false
+    /// Called when the user chooses Share from the context menu.
+    var onContextMenuShare: ((UIImage) -> Void)? = nil
+
+    // MARK: - Body
+
     public var body: some View {
         VStack {
             if isSinglePhotoMode {
                 Spacer()
             }
             if let image = photo.image {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: isSinglePhotoMode ? .fit : .fill)
-                    .cornerRadius(12) 
+                if isSinglePhotoMode {
+                    ZoomableImageView(image: image, resetToken: resetToken)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .id(photo.id)
+                        .accessibilityLabel("Photo")
+                        .accessibilityAddTraits(.isImage)
+                        .accessibilityHint("Double-tap to zoom")
+                        .if(showContextMenu) { view in
+                            view.contextMenu {
+                                Button {
+                                    UIPasteboard.general.image = image
+                                } label: {
+                                    Label("Copy", systemImage: "doc.on.doc")
+                                }
+
+                                Button {
+                                    onContextMenuShare?(image)
+                                } label: {
+                                    Label("Share", systemImage: "square.and.arrow.up")
+                                }
+
+                                Button {
+                                    UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+                                } label: {
+                                    Label("Save to Photos", systemImage: "square.and.arrow.down")
+                                }
+                            }
+                        }
+                } else {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .accessibilityLabel("Photo")
+                        .accessibilityAddTraits(.isImage)
+                }
             } else if didFailToLoad {
-                Color.red.opacity(0.2)
-                    .overlay(
-                        Image(systemName: "exclamationmark.triangle")
-                            .foregroundColor(.red)
-                            .font(.largeTitle)
-                    )
+                if let errorView {
+                    errorView
+                        .accessibilityLabel("Failed to load photo")
+                } else {
+                    defaultErrorView
+                }
             } else {
-                Color.gray.opacity(0.1)
-                    .overlay(
-                        ProgressView()
-                    )
+                if let placeholderView {
+                    placeholderView
+                        .accessibilityLabel("Loading photo")
+                } else {
+                    defaultPlaceholderView
+                }
+            }
+            if isSinglePhotoMode, let caption = photo.caption {
+                Text(caption)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .accessibilityLabel("Caption: \(caption)")
             }
             if isSinglePhotoMode {
                 Spacer()
             }
         }
         .onAppear {
-            guard photo.image == nil && !didFailToLoad else { return }
-
-            if let url = photo.imageURL {
-                // Load image from remote URL using async/await
-                imageLoadTask = Task {
-                    do {
-                        let (data, _) = try await URLSession.shared.data(from: url)
-                        guard !Task.isCancelled else { return }
-
-                        if let loadedImage = UIImage(data: data) {
-                            await MainActor.run {
-                                self.photo.image = loadedImage
-                            }
-                        } else {
-                            await MainActor.run {
-                                self.didFailToLoad = true
-                            }
-                        }
-                    } catch {
-                        guard !Task.isCancelled else { return }
-                        await MainActor.run {
-                            self.didFailToLoad = true
-                        }
-                    }
-                }
-                return
-            }
+            guard photo.image == nil, !didFailToLoad else { return }
 
             let completion: (UIImage?) -> Void = { img in
                 if let img = img {
@@ -86,7 +123,28 @@ public struct PhotoView: View {
             }
         }
         .onDisappear {
-            imageLoadTask?.cancel()
+            photo.cancelPendingLoad()
         }
+    }
+
+    // MARK: - Default state views
+
+    private var defaultPlaceholderView: some View {
+        Color.gray.opacity(0.1)
+            .overlay(
+                ProgressView()
+                    .tint(tintColor)
+            )
+            .accessibilityLabel("Loading photo")
+    }
+
+    private var defaultErrorView: some View {
+        Color.red.opacity(0.2)
+            .overlay(
+                Image(systemName: "exclamationmark.triangle")
+                    .foregroundColor(.red)
+                    .font(.largeTitle)
+            )
+            .accessibilityLabel("Failed to load photo")
     }
 }
