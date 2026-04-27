@@ -7,6 +7,7 @@
 
 import Combine
 import SwiftUI
+import UIKit
 
 /// Holds all mutable state and business logic for `HImageViewer`.
 ///
@@ -42,7 +43,7 @@ final class HImageViewerViewModel: ObservableObject {
     let config: HImageViewerConfiguration
     let uploadState: HImageViewerUploadState
     weak var delegate: HImageViewerControlDelegate?
-    let haptics: HapticFeedbackProviding
+    private let haptics: HapticFeedbackProviding
     private var uploadStateCancellable: AnyCancellable?
 
     let dismissThreshold: CGFloat = 120
@@ -195,5 +196,13 @@ final class HImageViewerViewModel: ObservableObject {
         shareItems = images
         isShareSheetPresented = true
         haptics.impact(.light)
+    }
+
+    // MARK: - Haptics (internal access so views can trigger haptics without exposing the provider)
+
+    /// Fires an impact haptic of the given style.
+    /// Views call this instead of accessing `haptics` directly, keeping the provider private.
+    func impactHaptic(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
+        haptics.impact(style)
     }
 }

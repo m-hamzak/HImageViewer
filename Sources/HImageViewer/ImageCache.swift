@@ -46,7 +46,10 @@ final class ImageCache: @unchecked Sendable {
             if let image = newValue {
                 // Cost in bytes: pixel dimensions (not point dimensions) × 4 bytes per pixel.
                 // UIImage.size is in points, so multiply by scale² to get actual pixel count.
-                let cost = Int(image.size.width * image.scale * image.size.height * image.scale * 4)
+                // Cost in bytes: pixel dimensions × 4 bytes per pixel.
+                // Minimum cost of 1 ensures NSCache's LRU eviction counts every entry,
+                // even for pathological zero-dimension images.
+                let cost = max(1, Int(image.size.width * image.scale * image.size.height * image.scale * 4))
                 cache.setObject(image, forKey: key, cost: cost)
             } else {
                 cache.removeObject(forKey: key)

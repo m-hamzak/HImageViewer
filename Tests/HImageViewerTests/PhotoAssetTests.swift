@@ -381,4 +381,44 @@ final class PhotoAssetTests: XCTestCase {
         let asset = PhotoAsset(image: UIImage(systemName: "photo")!, caption: "")
         XCTAssertEqual(asset.caption, "")
     }
+
+    // MARK: - loadError
+
+    func test_loadError_initiallyNil() {
+        let asset = PhotoAsset(imageURL: URL(string: "https://example.com/photo.jpg")!)
+        XCTAssertNil(asset.loadError, "loadError must be nil before any load attempt")
+    }
+
+    func test_loadError_imageInit_isNil() {
+        // Assets created from a UIImage never perform network loads,
+        // so loadError must always remain nil.
+        let asset = PhotoAsset(image: UIImage(systemName: "star")!)
+        XCTAssertNil(asset.loadError, "UIImage-backed assets must never set loadError")
+    }
+
+    func test_loadError_setOnNetworkFailure() async {
+        // A clearly invalid URL causes URLSession to fail immediately.
+        let asset = PhotoAsset(imageURL: URL(string: "https://localhost:1/nonexistent.jpg")!)
+        await withCheckedContinuation { continuation in
+            asset.loadFullImage { _ in
+                continuation.resume()
+            }
+        }
+        XCTAssertNotNil(asset.loadError,
+                        "loadError must be non-nil after a network failure")
+    }
+
+    func test_loadError_clearedOnNewLoad() async {
+        // Verify that starting a new load resets any previously stored error.
+        let asset = PhotoAsset(imageURL: URL(string: "https://localhost:1/nonexistent.jpg")!)
+        await withCheckedContinuation { continuation in
+            asset.loadFullImage { _ in continuation.resume() }
+        }
+        XCTAssertNotNil(asset.loadError, "Pre-condition: error must be set after failure")
+
+        // Start a second load — loadError should be cleared immediately.
+        asset.loadFullImage { _ in }
+        XCTAssertNil(asset.loadError,
+                     "loadError must be cleared to nil when a new load starts")
+    }
 }

@@ -57,6 +57,13 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
     /// ```
     public let caption: String?
 
+    /// Set when a URL-based load fails for a reason other than cancellation.
+    ///
+    /// Observe this property to surface a meaningful error to the user
+    /// (e.g. network timeout, 404) instead of silently showing a blank image.
+    /// Reset to `nil` whenever a new load starts or completes successfully.
+    @Published public var loadError: Error?
+
     // Track active requests for cancellation
     private var currentRequestID: PHImageRequestID?
     private var urlLoadTask: Task<Void, Never>?
@@ -190,12 +197,14 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
             }
             // Cache miss — fetch from network
             urlLoadTask?.cancel()
+            loadError = nil
             urlLoadTask = Task {
                 do {
                     let (data, _) = try await URLSession.shared.data(from: url)
                     guard !Task.isCancelled else { return }
                     if let loaded = UIImage(data: data) {
                         ImageCache.shared[url] = loaded
+                        self.loadError = nil
                         self.image = loaded
                         completion(loaded)
                     } else {
@@ -203,6 +212,7 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
                     }
                 } catch {
                     guard !Task.isCancelled else { return }
+                    self.loadError = error
                     completion(nil)
                 }
             }
