@@ -14,7 +14,7 @@ Or add it to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/m-hamzak/HImageViewer.git", from: "1.0.0")
+    .package(url: "https://github.com/m-hamzak/HImageViewer.git", from: "1.1.0")
 ]
 ```
 
@@ -113,11 +113,17 @@ let config = HImageViewerConfiguration(
 
 ## Delegate callbacks
 
+All methods have default no-op implementations — implement only what you need.
+
 ```swift
 class MyController: HImageViewerControlDelegate {
 
     func didTapSaveButton(comment: String, photos: [PhotoAsset]) {
         upload(photos, comment: comment)
+    }
+
+    func didTapEditButton(photo: PhotoAsset) {
+        present(EditorViewController(photo: photo), animated: true)
     }
 
     func didTapShareButton(photos: [PhotoAsset]) {
@@ -136,6 +142,15 @@ class MyController: HImageViewerControlDelegate {
 }
 ```
 
+Pass the delegate via configuration:
+
+```swift
+let config = HImageViewerConfiguration(delegate: myController)
+HImageViewer(mediaAssets: $assets, configuration: config)
+```
+
+> The viewer holds the delegate **weakly**. Keep the adopting object alive for the duration of the viewer session.
+
 ## Upload progress
 
 ```swift
@@ -151,7 +166,43 @@ uploadState.progress = 0.5   // 50%
 uploadState.progress = 1.0   // complete — viewer auto-dismisses
 ```
 
+## Video playback
+
+Pass any direct-stream URL as a `.video` asset. The viewer configures the `AVAudioSession` automatically so video audio mixes correctly with your app.
+
+```swift
+let assets: [MediaAsset] = [
+    .photo(PhotoAsset(image: UIImage(named: "poster")!)),
+    .video(URL(string: "https://example.com/clip.mp4")!),
+]
+```
+
+If the stream fails to load, a built-in error overlay appears with a **Retry** button — no extra configuration required.
+
+## Push vs modal
+
+`HImageViewer` detects its presentation context automatically and adjusts its UI:
+
+| Context | Close button | Controls |
+|---------|-------------|----------|
+| Modal (`.fullScreenCover` / `present`) | ✓ Shown (✕ top-left) | Custom top bar inside the viewer |
+| Pushed (`navigationController.push`) | Hidden — system Back takes over | Native navigation bar |
+
+```swift
+// Modal — SwiftUI
+.fullScreenCover(isPresented: $isPresented) {
+    HImageViewer(mediaAssets: $assets)
+}
+
+// Pushed — UIKit
+HImageViewerLauncher.push(from: self, mediaAssets: assets)
+```
+
+Drag-to-dismiss (swipe down) is active in modal context; the system swipe-back handles pushed context.
+
 ## UIKit integration
+
+### Modal presentation
 
 ```swift
 HImageViewerLauncher.present(
@@ -159,6 +210,14 @@ HImageViewerLauncher.present(
     mediaAssets: assets,
     configuration: HImageViewerConfiguration(tintColor: .systemBlue)
 ) { updatedAssets in
-    self.assets = updatedAssets
+    self.assets = updatedAssets   // deletions and reorders sync back
 }
 ```
+
+### Push onto a navigation stack
+
+```swift
+HImageViewerLauncher.push(from: self, mediaAssets: assets)
+```
+
+When pushed, the viewer's page counter and Edit / Select buttons appear natively in the navigation bar.
