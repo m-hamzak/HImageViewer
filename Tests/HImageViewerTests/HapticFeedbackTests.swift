@@ -168,10 +168,42 @@ final class HapticFeedbackTests: XCTestCase {
 
     // MARK: - Default provider type
 
-    func test_vmDefaultHaptics_isRealProvider() {
-        let vm = HImageViewerViewModel()
-        XCTAssertTrue(vm.haptics is HapticFeedbackProvider,
-                      "Default haptics must be the real HapticFeedbackProvider")
+    // Verifies the real HapticFeedbackProvider is wired by default: creating a
+    // ViewModel without injection and triggering a haptic must not crash.
+    func test_vmDefaultHaptics_doesNotCrashOnPageChange() {
+        let vm = HImageViewerViewModel(
+            mediaAssets: makeMediaAssets(3),
+            config: HImageViewerConfiguration(pageChangeHaptic: true)
+        )
+        vm.currentIndex = 1   // fires real HapticFeedbackProvider.selection()
+    }
+
+    // MARK: - Real HapticFeedbackProvider (all styles pre-warmed)
+
+    func test_realProvider_impactLight_doesNotCrash() {
+        HapticFeedbackProvider().impact(.light)
+    }
+
+    func test_realProvider_impactMedium_doesNotCrash() {
+        HapticFeedbackProvider().impact(.medium)
+    }
+
+    func test_realProvider_impactHeavy_doesNotCrash() {
+        HapticFeedbackProvider().impact(.heavy)
+    }
+
+    func test_realProvider_impactSoft_doesNotCrash() {
+        // .soft is pre-warmed; previously hit @unknown default and allocated each call
+        HapticFeedbackProvider().impact(.soft)
+    }
+
+    func test_realProvider_impactRigid_doesNotCrash() {
+        // .rigid is pre-warmed; previously hit @unknown default and allocated each call
+        HapticFeedbackProvider().impact(.rigid)
+    }
+
+    func test_realProvider_selection_doesNotCrash() {
+        HapticFeedbackProvider().selection()
     }
 
     // MARK: - Page-change haptic

@@ -276,7 +276,7 @@ public struct HImageViewer: View {
                     || predictedHeight > vm.dismissThreshold
 
                 if shouldDismiss {
-                    vm.haptics.impact(.light)
+                    vm.impactHaptic(.light)
                     withAnimation(.easeOut(duration: 0.25)) {
                         vm.dragOffset = screenHeight
                     }
@@ -356,7 +356,7 @@ private struct NavigationDetector: UIViewRepresentable {
             isUserInteractionEnabled = false
         }
 
-        required init?(coder: NSCoder) { fatalError("not used") }
+        required init?(coder: NSCoder) { fatalError("NavigationDetector must be created in code, not via a decoder") }
 
         override func didMoveToWindow() {
             super.didMoveToWindow()

@@ -25,13 +25,16 @@ protocol HapticFeedbackProviding {
 /// Default implementation that drives `UIImpactFeedbackGenerator` and
 /// `UISelectionFeedbackGenerator`.
 ///
-/// Generators are created once and reused across calls, avoiding
-/// repeated allocation and allowing the Taptic Engine to stay primed.
+/// All five impact styles (`.light`, `.medium`, `.heavy`, `.soft`, `.rigid`) are
+/// pre-allocated so the Taptic Engine stays primed and no allocation occurs on the
+/// haptic hot path.
 final class HapticFeedbackProvider: HapticFeedbackProviding {
 
     private let light            = UIImpactFeedbackGenerator(style: .light)
     private let medium           = UIImpactFeedbackGenerator(style: .medium)
     private let heavy            = UIImpactFeedbackGenerator(style: .heavy)
+    private let soft             = UIImpactFeedbackGenerator(style: .soft)
+    private let rigid            = UIImpactFeedbackGenerator(style: .rigid)
     private let selectionEngine  = UISelectionFeedbackGenerator()
 
     func impact(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
@@ -39,6 +42,8 @@ final class HapticFeedbackProvider: HapticFeedbackProviding {
         case .light:              light.impactOccurred()
         case .medium:             medium.impactOccurred()
         case .heavy:              heavy.impactOccurred()
+        case .soft:               soft.impactOccurred()
+        case .rigid:              rigid.impactOccurred()
         @unknown default:         UIImpactFeedbackGenerator(style: style).impactOccurred()
         }
     }

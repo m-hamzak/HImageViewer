@@ -96,8 +96,8 @@ struct MultiPhotoGrid: View {
         .padding(.top)
         .onAppear {
             guard let focus = focusIndex else { return }
-            // Use a short delay so the grid has laid out before scrolling.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            // Defer one run-loop cycle so the grid has finished layout before scrolling.
+            Task { @MainActor in
                 withAnimation(.easeInOut(duration: 0.3)) {
                     proxy.scrollTo(mediaItems[safe: focus]?.id, anchor: .center)
                 }
