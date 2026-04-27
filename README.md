@@ -699,7 +699,7 @@ No extra configuration is required for video. The audio session is set up automa
 ```
 MIT License
 
-Copyright (c) 2025 Hamza Khalid
+Copyright (c) 2026 Muhammad Hamza Khalid
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
