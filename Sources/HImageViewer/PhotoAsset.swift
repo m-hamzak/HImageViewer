@@ -8,36 +8,121 @@
 import UIKit
 import Photos
 
+/// A model representing a photo asset that can be displayed in `HImageViewer`.
+///
+/// `PhotoAsset` supports three initialization modes:
+/// - From a `PHAsset` (Photos framework asset)
+/// - From a `UIImage` (direct image)
+/// - From a remote `URL` (network image)
+///
+/// The class handles asynchronous image loading and provides thumbnail and full-size image loading capabilities.
+///
+/// ## Usage
+///
+/// ### From UIImage:
+/// ```swift
+/// let asset = PhotoAsset(image: myUIImage)
+/// ```
+///
+/// ### From PHAsset:
+/// ```swift
+/// let asset = PhotoAsset(phAsset: myPHAsset)
+/// asset.loadFullImage { image in
+///     // Use loaded image
+/// }
+/// ```
+///
+/// ### From remote URL:
+/// ```swift
+/// let asset = PhotoAsset(imageURL: myURL)
+/// ```
+///
+/// - Important: Image loading is performed asynchronously and automatically managed by the viewer.
+/// - Note: This class is annotated with `@MainActor` to ensure thread-safe UI updates.
 @MainActor
 public class PhotoAsset: ObservableObject, Identifiable, Equatable {
+
+    // MARK: - Properties
+
     public let id = UUID()
     public let phAsset: PHAsset?
     @Published public var image: UIImage?
-    public var imageURL: URL?
-    public var isSelected: Bool = false
+    public let imageURL: URL?
 
-    // Track active image requests for cancellation
+    /// Optional caption displayed beneath the photo in single-photo mode.
+    ///
+    /// Pass a non-nil value to show a text label below the image:
+    /// ```swift
+    /// PhotoAsset(image: myImage, caption: "Sunset at Maldives")
+    /// ```
+    public let caption: String?
+
+    /// Set when a URL-based load fails for a reason other than cancellation.
+    ///
+    /// Observe this property to surface a meaningful error to the user
+    /// (e.g. network timeout, 404) instead of silently showing a blank image.
+    /// Reset to `nil` whenever a new load starts or completes successfully.
+    @Published public var loadError: Error?
+
+    // Track active requests for cancellation
     private var currentRequestID: PHImageRequestID?
+    private var urlLoadTask: Task<Void, Never>?
 
-    // Init with PHAsset (e.g., from PHPickerViewController)
-    public init(phAsset: PHAsset) {
+    // MARK: - Initialization
+
+    /// Creates a photo asset from a Photos framework asset.
+    ///
+    /// - Parameters:
+    ///   - phAsset: The Photos framework asset to wrap.
+    ///   - caption: Optional caption shown below the image in single-photo mode.
+    ///
+    /// - Note: The actual image is loaded lazily when needed via `loadThumbnail(targetSize:completion:)` or `loadFullImage(completion:)`.
+    public init(phAsset: PHAsset, caption: String? = nil) {
         self.phAsset = phAsset
         self.image = nil
+        self.imageURL = nil
+        self.caption = caption
     }
 
-    // Init with direct UIImage (e.g., from camera)
-    public init(image: UIImage) {
+    /// Creates a photo asset from a UIImage.
+    ///
+    /// - Parameters:
+    ///   - image: The UIImage to display.
+    ///   - caption: Optional caption shown below the image in single-photo mode.
+    public init(image: UIImage, caption: String? = nil) {
         self.image = image
         self.phAsset = nil
+        self.imageURL = nil
+        self.caption = caption
     }
-    
-    public init(imageURL: URL) {
+
+    /// Creates a photo asset from a remote image URL.
+    ///
+    /// - Parameters:
+    ///   - imageURL: The URL of the remote image to load.
+    ///   - caption: Optional caption shown below the image in single-photo mode.
+    ///
+    /// - Note: The image is loaded asynchronously when the viewer displays this asset.
+    public init(imageURL: URL, caption: String? = nil) {
         self.imageURL = imageURL
         self.phAsset = nil
         self.image = nil
+        self.caption = caption
     }
 
-    // Load thumbnail image
+    // MARK: - Image Loading
+
+    /// Loads a thumbnail-sized version of the image asynchronously.
+    ///
+    /// - `UIImage` assets return immediately.
+    /// - `PHAsset` assets use `PHImageManager` with fast-format delivery.
+    /// - URL assets delegate to `loadFullImage` — the cached full image is returned on subsequent calls.
+    ///
+    /// - Parameters:
+    ///   - targetSize: Desired thumbnail size for `PHAsset` requests.
+    ///   - completion: Called on the main thread with the loaded image, or `nil` on failure.
+    ///
+    /// - Note: Call `cancelPendingLoad()` to cancel an in-flight request.
     public func loadThumbnail(targetSize: CGSize, completion: @escaping (UIImage?) -> Void) {
         if let image = image {
             completion(image)
@@ -54,22 +139,35 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
                 contentMode: .aspectFill,
                 options: options
             ) { [weak self] result, _ in
-                DispatchQueue.main.async {
-                    self?.currentRequestID = nil
-                    completion(result)
-                }
+                self?.currentRequestID = nil
+                completion(result)
             }
             currentRequestID = requestID
+        } else if imageURL != nil {
+            // URL assets have no native thumbnail — delegate to full load.
+            // Subsequent calls will hit the in-memory cache immediately.
+            loadFullImage(completion: completion)
         } else {
             completion(nil)
         }
     }
 
-    // Load full-size image
+    /// Loads the full-resolution version of the image asynchronously.
+    ///
+    /// - `UIImage` assets return immediately.
+    /// - `PHAsset` assets use `PHImageManager` with high-quality delivery.
+    /// - URL assets check `ImageCache` first; on a miss, fetches via `URLSession` and populates the cache.
+    ///
+    /// - Parameter completion: Called on the main thread with the loaded image, or `nil` on failure.
+    ///
+    /// - Note: Call `cancelPendingLoad()` to cancel an in-flight request.
     public func loadFullImage(completion: @escaping (UIImage?) -> Void) {
         if let image = image {
             completion(image)
-        } else if let phAsset = phAsset {
+            return
+        }
+
+        if let phAsset = phAsset {
             let options = PHImageRequestOptions()
             options.deliveryMode = .highQualityFormat
             options.isSynchronous = false
@@ -83,36 +181,93 @@ public class PhotoAsset: ObservableObject, Identifiable, Equatable {
                 contentMode: .aspectFit,
                 options: options
             ) { [weak self] result, _ in
-                DispatchQueue.main.async {
-                    self?.currentRequestID = nil
-                    completion(result)
-                }
+                self?.currentRequestID = nil
+                completion(result)
             }
             currentRequestID = requestID
-        } else {
-            completion(nil)
+            return
+        }
+
+        if let url = imageURL {
+            // Cache hit — return synchronously
+            if let cached = ImageCache.shared[url] {
+                image = cached
+                completion(cached)
+                return
+            }
+            // Cache miss — fetch from network
+            urlLoadTask?.cancel()
+            loadError = nil
+            urlLoadTask = Task {
+                do {
+                    let (data, _) = try await URLSession.shared.data(from: url)
+                    guard !Task.isCancelled else { return }
+                    if let loaded = UIImage(data: data) {
+                        ImageCache.shared[url] = loaded
+                        self.loadError = nil
+                        self.image = loaded
+                        completion(loaded)
+                    } else {
+                        completion(nil)
+                    }
+                } catch {
+                    guard !Task.isCancelled else { return }
+                    self.loadError = error
+                    completion(nil)
+                }
+            }
+            return
+        }
+
+        completion(nil)
+    }
+
+    // MARK: - Cancellation
+
+    /// Cancels any in-flight image load (URL fetch or PHAsset request).
+    ///
+    /// Call this when the view displaying this asset disappears to avoid
+    /// redundant network and Photos framework activity.
+    public func cancelPendingLoad() {
+        urlLoadTask?.cancel()
+        urlLoadTask = nil
+        if let requestID = currentRequestID {
+            PHImageManager.default().cancelImageRequest(requestID)
+            currentRequestID = nil
         }
     }
 
-    // Equatable support
+    // MARK: - Equatable
+
     nonisolated public static func == (lhs: PhotoAsset, rhs: PhotoAsset) -> Bool {
         return lhs.id == rhs.id
     }
 
-    // Cancel any pending image requests on deallocation
+    // Only cancel the URLSession task here — it is Sendable and safe to cancel from any thread.
+    // PHImageManager requests are cancelled in cancelPendingLoad(), which is called from
+    // PhotoView.onDisappear on the main actor. Calling PHImageManager from deinit is unsafe
+    // because deinit runs on whichever thread releases the last reference, not the main actor.
     deinit {
-        if let requestID = currentRequestID {
-            PHImageManager.default().cancelImageRequest(requestID)
-        }
+        urlLoadTask?.cancel()
     }
 }
 
+// MARK: - Convenience Methods
+
 @MainActor
 extension PhotoAsset {
+    /// Convenience method to create an array of `PhotoAsset` from UIImages.
+    ///
+    /// - Parameter uiImages: Array of UIImages to convert.
+    /// - Returns: Array of `PhotoAsset` objects.
     public static func from(uiImages: [UIImage]) -> [PhotoAsset] {
         uiImages.map { PhotoAsset(image: $0) }
     }
 
+    /// Convenience method to create an array of `PhotoAsset` from PHAssets.
+    ///
+    /// - Parameter phAssets: Array of PHAssets from Photos framework.
+    /// - Returns: Array of `PhotoAsset` objects.
     public static func from(phAssets: [PHAsset]) -> [PhotoAsset] {
         phAssets.map { PhotoAsset(phAsset: $0) }
     }
