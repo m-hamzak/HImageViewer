@@ -59,7 +59,7 @@ struct PhotoGalleryExample: View {
 struct MixedMediaExample: View {
     @State private var items: [MediaAsset] = [
         .photo(PhotoAsset(image: sym("photo"))),
-        .video(URL(string: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4")!),
+        .video(URL(string: "https://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_320x180.mp4")!),
         .photo(PhotoAsset(image: sym("star"))),
     ]
     @State private var isPresented = false
