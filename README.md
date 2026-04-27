@@ -14,15 +14,19 @@ Drop it into any SwiftUI **or** UIKit / Storyboard app with a single line of cod
 ## Features
 
 - **Paged gallery** — swipe horizontally through photos and videos
-- **Pinch-to-zoom & double-tap zoom** on photos
-- **Native video playback** via AVKit with full transport controls
+- **Pinch-to-zoom & double-tap zoom** on photos (zoom-to-point precision on double-tap)
+- **Native video playback** via AVKit with full transport controls and error-recovery overlay
 - **Multi-select mode** — tap Select to enter a checkmark grid
 - **Drag-to-reorder** — long-press any tile in the grid to reorder
 - **Delete selected items** from the grid
 - **Drag-to-dismiss** — swipe down to close (modal presentation only)
 - **Comment box** — optional editable text field at the bottom
 - **Upload progress overlay** — animated ring that auto-dismisses on completion
-- **Glass theme** (iOS Liquid Glass, default) and **Classic theme** (any tint color)
+- **Share button** — one-tap `UIActivityViewController` for the current photo; fires `didTapShareButton` on the delegate
+- **Long-press context menu** — Copy, Share, and Save to Photos actions on every photo
+- **Per-photo captions** — set an optional `caption` label on any `PhotoAsset`
+- **Page-change haptic** — optional selection pulse on every swipe (opt-in, off by default)
+- **Glass theme** (iOS 26 Liquid Glass, default) and **Classic theme** (any tint color)
 - **Adaptive appearance** — canvas and controls respond to system light/dark mode automatically
 - **Smart navigation** — close button shown for modal presentation, hidden when pushed (system back button takes over); nav-bar controls (counter, Edit, Select) appear natively in the system navigation bar when pushed
 - **Remote image loading** with in-memory LRU cache
@@ -55,7 +59,7 @@ Drop it into any SwiftUI **or** UIKit / Storyboard app with a single line of cod
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/m-hamzak/HImageViewer.git", from: "1.0.0")
+    .package(url: "https://github.com/m-hamzak/HImageViewer.git", from: "1.1.0")
 ],
 targets: [
     .target(name: "MyApp", dependencies: ["HImageViewer"])
@@ -468,10 +472,13 @@ class MyViewController: UIViewController {
 | `showSaveButton` | `Bool` | `true` | Shows the Save button in the bottom bar. |
 | `showCommentBox` | `Bool` | `true` | Shows an editable comment field in the bottom bar. |
 | `showEditButton` | `Bool` | `true` | Shows the Edit button in single-photo mode. |
+| `showShareButton` | `Bool` | `true` | Shows the Share button in the top bar. Fires `didTapShareButton` and presents `UIActivityViewController` for the current photo. |
+| `showContextMenu` | `Bool` | `true` | Shows a long-press context menu on photos with Copy, Share, and Save to Photos actions. |
+| `pageChangeHaptic` | `Bool` | `false` | Fires a selection haptic on every page swipe. Opt in to match the native Photos-app feel. |
 | `initialComment` | `String?` | `nil` | Pre-fills the comment box. |
 | `title` | `String?` | `nil` | Static label shown when `showCommentBox` is `false`. |
 | `uploadState` | `HImageViewerUploadState?` | `nil` | Drives the upload progress overlay. |
-| `delegate` | `HImageViewerControlDelegate?` | `nil` | Receives save, edit, and close callbacks. |
+| `delegate` | `HImageViewerControlDelegate?` | `nil` | Receives save, edit, share, and close callbacks. |
 | `placeholderView` | `AnyView?` | `nil` | Custom view while an image is loading. |
 | `errorView` | `AnyView?` | `nil` | Custom view when an image fails to load. |
 
@@ -481,7 +488,7 @@ class MyViewController: UIViewController {
 
 ### Liquid Glass (default)
 
-Frosted-glass buttons and bars. Adapts to the system light/dark mode automatically — no forced color scheme override. The accent color inherits from the host app's global `accentColor`, so buttons match the rest of your app with zero configuration.
+Native iOS 26 Liquid Glass frosted-glass buttons and bars, with a polished material fallback for iOS 15–25. Adapts to the system light/dark mode automatically — no forced color scheme override. The accent color inherits from the host app's global `accentColor`, so buttons match the rest of your app with zero configuration.
 
 ```swift
 HImageViewerConfiguration()   // tintColor defaults to nil → Glass mode
@@ -550,6 +557,29 @@ asset.videoURL    // URL?        — nil for photos
 | `PhotoAsset(phAsset: PHAsset)` | Loading from the user's Photos library |
 | `PhotoAsset(imageURL: URL)` | Fetching from a remote server |
 
+### Per-photo captions
+
+Set an optional `caption` on any `PhotoAsset`. The viewer displays it as a subtitle below the photo when provided.
+
+```swift
+let asset = PhotoAsset(image: UIImage(named: "sunset")!, caption: "Golden hour in the Alps")
+let asset = PhotoAsset(imageURL: remoteURL, caption: "Lake Tahoe, CA")
+```
+
+### Load error inspection
+
+After a URL-based photo fails to load, `loadError` is set to the underlying `Error`. Use it to show a custom error message or decide whether to retry.
+
+```swift
+asset.loadFullImage { image in
+    if image == nil, let error = asset.loadError {
+        print("Failed to load: \(error.localizedDescription)")
+    }
+}
+```
+
+`loadError` is always `nil` for `UIImage`-backed assets and is automatically cleared when a new load starts.
+
 ### Batch helpers
 
 ```swift
@@ -593,8 +623,74 @@ public protocol HImageViewerControlDelegate: AnyObject {
     /// Called every time the visible page changes (swipe or programmatic).
     /// - `index`: Zero-based index of the newly visible item.
     func didChangePage(to index: Int)
+
+    /// Called when the user taps the Share button or chooses Share from the context menu.
+    /// The viewer also presents UIActivityViewController automatically.
+    /// - `photos`: The photo(s) being shared. Single-photo mode = one item;
+    ///   selection mode = every selected photo.
+    func didTapShareButton(photos: [PhotoAsset])
 }
 ```
+
+---
+
+## Share & Context Menu
+
+### Share button
+
+The Share button appears in the top bar when `showShareButton` is `true` (default). Tapping it presents `UIActivityViewController` for the current photo and fires `didTapShareButton` on the delegate.
+
+```swift
+let config = HImageViewerConfiguration(
+    showShareButton: true,
+    delegate: self
+)
+
+// In your delegate:
+func didTapShareButton(photos: [PhotoAsset]) {
+    analytics.track("photo_shared", count: photos.count)
+}
+```
+
+To disable the Share button:
+
+```swift
+HImageViewerConfiguration(showShareButton: false)
+```
+
+### Context menu
+
+Long-press any photo to reveal a context menu with three actions:
+
+- **Copy** — copies the image to the pasteboard
+- **Share** — same as tapping the Share button
+- **Save to Photos** — saves the image to the user's Photos library
+
+```swift
+// Disable context menus entirely:
+HImageViewerConfiguration(showContextMenu: false)
+```
+
+---
+
+## Video playback
+
+Videos are played using `AVKit` with native transport controls. The viewer automatically:
+
+- Configures the `AVAudioSession` to `.playback` / `.moviePlayback` so video audio mixes correctly with your app
+- Observes `AVPlayerItem.status` via Combine and shows a custom error overlay if the stream fails to load
+- Provides a **Retry** button in the error overlay to reload the stream without dismissing the viewer
+
+```swift
+// Mixed gallery with a video
+let items: [MediaAsset] = [
+    .photo(PhotoAsset(image: UIImage(named: "cover")!)),
+    .video(URL(string: "https://example.com/clip.mp4")!),
+]
+HImageViewer(mediaAssets: $items)
+```
+
+No extra configuration is required for video. The audio session is set up automatically when the player first loads.
 
 ---
 
