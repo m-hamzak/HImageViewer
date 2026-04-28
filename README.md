@@ -3,7 +3,6 @@
 A lightweight, plug-and-play SwiftUI image and video viewer for iOS.  
 Drop it into any SwiftUI **or** UIKit / Storyboard app with a single line of code.
 
-[![CI](https://github.com/m-hamzak/HImageViewer/actions/workflows/ci.yml/badge.svg)](https://github.com/m-hamzak/HImageViewer/actions/workflows/ci.yml)
 ![iOS 15+](https://img.shields.io/badge/iOS-15%2B-blue)
 ![Swift 5.9+](https://img.shields.io/badge/Swift-5.9%2B-orange)
 ![SPM Compatible](https://img.shields.io/badge/SPM-compatible-brightgreen)
